@@ -112,10 +112,10 @@
             // 
             // stripList
             // 
-            stripList.BackColor = Color.FromArgb(26, 26, 26);
+            stripList.BackColor = Color.Gainsboro;
             stripList.Columns.AddRange(new ColumnHeader[] { colName, colHost, colSocket, colWiFi, colStatus, colBPS, colClock, colBuffer, colPower, colFPS, colOffset, colConnects, colQueue, colEffect });
             stripList.Dock = DockStyle.Fill;
-            stripList.ForeColor = Color.White;
+            stripList.ForeColor = Color.Black;
             stripList.Location = new Point(0, 0);
             stripList.Name = "stripList";
             stripList.Size = new Size(1192, 331);
@@ -258,7 +258,7 @@
             tabLogging.Location = new Point(4, 24);
             tabLogging.Name = "tabLogging";
             tabLogging.Padding = new Padding(3);
-            tabLogging.Size = new Size(991, 462);
+            tabLogging.Size = new Size(1198, 705);
             tabLogging.TabIndex = 1;
             tabLogging.Text = "Logging";
             tabLogging.UseVisualStyleBackColor = true;

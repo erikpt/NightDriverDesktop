@@ -19,5 +19,20 @@ namespace NightDriver
             if (m.Msg != 0x14)
                 base.OnNotifyMessage(m);
         }
+
+        protected override void OnDrawItem(DrawListViewItemEventArgs e)
+        {
+            // Draw the background
+            e.DrawBackground();
+
+            // Draw the item text
+            e.DrawText();
+        }
+
+        protected override void OnDrawSubItem(DrawListViewSubItemEventArgs e)
+        {
+            e.DrawDefault = true;
+            base.OnDrawSubItem(e);
+        }
     }
 }

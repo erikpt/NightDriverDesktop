@@ -114,7 +114,7 @@ namespace NightDriver
                 ListViewGroup group = stripList.Groups[typename];
                 if (group == null)
                     group = stripList.Groups.Add(typename, typename);
-                stripList.Items.Add(new StripListItem(group, strip.FriendlyName));
+                stripList.Items.Add(new StripListItem(group, strip.FriendlyName, strip));
             }
         }
 
@@ -198,11 +198,11 @@ namespace NightDriver
 
         }
 
-           private void stripList_SelectedIndexChanged(object sender, EventArgs e)
+        private void stripList_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (stripList.SelectedIndices.Count > 0)
             {
-                var strip = _server.AllStrips[stripList.SelectedIndices[0]];
+                var strip = stripList.SelectedItems[0].Tag as LightStrip;
                 panelVisualizer.ColorData = strip.Location.LEDs;
                 timerVisualizer.Interval = Math.Clamp(1000 / strip.Location.FramesPerSecond, 20, 500);
             }
@@ -236,6 +236,18 @@ class StripListItem : ListViewItem
         iCurrentEffect,
         MAX = iCurrentEffect
     };
+
+    public string Host
+    {
+        get
+        {
+            return SubItems[(int)ColumnIndex.iHost].Text;
+        }
+        set
+        {
+            SubItems[(int)ColumnIndex.iHost].Text = value;
+        }
+    }
 
     public string HasSocket
     {
@@ -417,10 +429,12 @@ class StripListItem : ListViewItem
         }
     }
 
-    public StripListItem(ListViewGroup group, String text)
+    public StripListItem(ListViewGroup group, String text, LightStrip strip)
     {
         Text = text;
         Group = group;
+        Tag = strip;
+
         for (ColumnIndex i = 0; i < ColumnIndex.MAX; i++)
             SubItems.Add(new ListViewItem.ListViewSubItem(this, "---"));
     }
@@ -428,8 +442,9 @@ class StripListItem : ListViewItem
     public static StripListItem CreateForStrip(ListViewGroup group, LightStrip strip)
     {
         double epoch = (DateTime.UtcNow.Ticks - DateTime.UnixEpoch.Ticks) / (double)TimeSpan.TicksPerSecond;
-        var item = new StripListItem(group, strip.FriendlyName);
+        var item = new StripListItem(group, strip.FriendlyName, strip);
 
+        item.Host           = strip.HostName;
         item.HasSocket      = !strip.HasSocket ? "No"   : "Open";
         item.WiFiSignal     = !strip.HasSocket ? "--- " : strip.Response.wifiSignal.ToString();
         item.ReadyForData   = !strip.HasSocket ? "--- " : strip.ReadyForData ? "Ready" : "No";
@@ -442,9 +457,9 @@ class StripListItem : ListViewItem
         item.Connects       = strip.Connects.ToString();
         item.QueueDepth     = strip.QueueDepth.ToString();
         item.CurrentEffect  = strip.Location.CurrentEffectName;
-
         item.Group = group;
 
+        Debug.Assert(item.Tag == strip);
         
         return item;
     }
