@@ -70,7 +70,7 @@
             // StartButton
             // 
             StartButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            StartButton.Location = new Point(908, 433);
+            StartButton.Location = new Point(1115, 676);
             StartButton.Name = "StartButton";
             StartButton.Size = new Size(75, 23);
             StartButton.TabIndex = 0;
@@ -82,7 +82,7 @@
             // 
             StopButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             StopButton.Enabled = false;
-            StopButton.Location = new Point(827, 433);
+            StopButton.Location = new Point(1034, 676);
             StopButton.Name = "StopButton";
             StopButton.Size = new Size(75, 23);
             StopButton.TabIndex = 0;
@@ -93,9 +93,9 @@
             // statusStrip1
             // 
             statusStrip1.Items.AddRange(new ToolStripItem[] { toolStripStatusLabel1 });
-            statusStrip1.Location = new Point(0, 496);
+            statusStrip1.Location = new Point(0, 739);
             statusStrip1.Name = "statusStrip1";
-            statusStrip1.Size = new Size(999, 22);
+            statusStrip1.Size = new Size(1206, 22);
             statusStrip1.TabIndex = 1;
             statusStrip1.Text = "statusStrip1";
             // 
@@ -118,13 +118,11 @@
             stripList.ForeColor = Color.White;
             stripList.Location = new Point(0, 0);
             stripList.Name = "stripList";
-            stripList.Size = new Size(985, 210);
+            stripList.Size = new Size(1192, 331);
             stripList.Sorting = SortOrder.Descending;
             stripList.TabIndex = 2;
             stripList.UseCompatibleStateImageBehavior = false;
             stripList.View = View.Details;
-            stripList.VirtualMode = true;
-            stripList.RetrieveVirtualItem += stripList_RetrieveVirtualItem;
             stripList.SelectedIndexChanged += stripList_SelectedIndexChanged;
             // 
             // colName
@@ -210,7 +208,7 @@
             tabControl.Name = "tabControl";
             tabControl.Padding = new Point(0, 0);
             tabControl.SelectedIndex = 0;
-            tabControl.Size = new Size(999, 490);
+            tabControl.Size = new Size(1206, 733);
             tabControl.TabIndex = 3;
             // 
             // tabMain
@@ -223,7 +221,7 @@
             tabMain.Location = new Point(4, 24);
             tabMain.Name = "tabMain";
             tabMain.Padding = new Padding(3);
-            tabMain.Size = new Size(991, 462);
+            tabMain.Size = new Size(1198, 705);
             tabMain.TabIndex = 0;
             tabMain.Text = "WiFi Control";
             // 
@@ -241,8 +239,8 @@
             // splitContainer1.Panel2
             // 
             splitContainer1.Panel2.Controls.Add(panelVisualizer);
-            splitContainer1.Size = new Size(985, 421);
-            splitContainer1.SplitterDistance = 210;
+            splitContainer1.Size = new Size(1192, 664);
+            splitContainer1.SplitterDistance = 331;
             splitContainer1.TabIndex = 4;
             // 
             // panelVisualizer
@@ -251,7 +249,7 @@
             panelVisualizer.Dock = DockStyle.Fill;
             panelVisualizer.Location = new Point(0, 0);
             panelVisualizer.Name = "panelVisualizer";
-            panelVisualizer.Size = new Size(985, 207);
+            panelVisualizer.Size = new Size(1192, 329);
             panelVisualizer.TabIndex = 3;
             // 
             // tabLogging
@@ -286,7 +284,7 @@
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.ActiveBorder;
-            ClientSize = new Size(999, 518);
+            ClientSize = new Size(1206, 761);
             Controls.Add(tabControl);
             Controls.Add(statusStrip1);
             Name = "MainForm";

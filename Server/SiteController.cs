@@ -1298,9 +1298,6 @@ namespace NightDriver
                     _Density =.25 * PIXELS_PER_METER144, _LEDScrollSpeed = 0, _LEDColorPerSecond = 12, _DotSize = 1, _EveryNthDot = 1, _Brightness = 1
                 }
             ),
-
-
-
         };
 
         public override LightStrip[] LightStrips { get { return _StripControllers; } }
