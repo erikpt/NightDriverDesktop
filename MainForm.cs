@@ -116,6 +116,8 @@ namespace NightDriver
 
             public List<Location> AllLocations = new List<Location>
             {
+              new Tree()             { FramesPerSecond = 28 },
+
               new CeilingStrip        { FramesPerSecond = 30 },
 
               new Cabana()            { FramesPerSecond = 20 },
@@ -211,6 +213,7 @@ namespace NightDriver
             {
                 var strip = _server.AllStrips[stripList.SelectedIndices[0]];
                 panelVisualizer.ColorData = strip.Location.LEDs;
+                timerVisualizer.Interval = Math.Clamp(1000 / strip.Location.FramesPerSecond, 20, 500);
             }
         }
 

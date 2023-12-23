@@ -88,19 +88,6 @@ namespace NightDriver
             for (uint i = _startIndex; i < _startIndex + _length; i++)
                 graphics.DrawPixel(i, _color);
 
-            /*
-            uint third = _length / 3;
-
-            for (uint i = _startIndex; i < third + _startIndex; i++)
-                graphics.DrawPixel(i, CRGB.Blue);
-
-            for (uint i = third + _startIndex; i < third * 2 + _startIndex; i++)
-                graphics.DrawPixel(i, CRGB.Red);
-
-            for (uint i = third * 2 + _startIndex; i < _length + _startIndex; i++)
-                graphics.DrawPixel(i, CRGB.Green);
-            */
-
             graphics.DrawPixel(_startIndex, CRGB.White);
             graphics.DrawPixel(_startIndex+1, CRGB.Black);
             graphics.DrawPixel(_startIndex+_length-1, CRGB.White);

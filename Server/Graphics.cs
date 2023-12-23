@@ -63,13 +63,6 @@ namespace NightDriver
             }
         }
 
-        public static double constrain(this double value, double inclusiveMinimum, double inclusiveMaximum)
-        {
-            if (value < inclusiveMinimum) { return inclusiveMinimum; }
-            if (value > inclusiveMaximum) { return inclusiveMaximum; }
-            return value;
-        }
-
         static Random _random = new Random();
         public static byte RandomByte()
         {
@@ -93,12 +86,7 @@ namespace NightDriver
 
         public static double UnixSeconds()
         {
-            double epoch = (DateTime.UtcNow.Ticks - DateTime.UnixEpoch.Ticks) / (double) TimeSpan.TicksPerSecond;
-
-            //ulong seconds = (ulong)epoch;                                       // Whole part of time number (left of the decimal point)
-            //ulong uSeconds = (ulong)((epoch - (int)epoch) * 1000000);           // Fractional part of time (right of the decimal point)
-
-             return epoch;
+            return (DateTime.UtcNow.Ticks - DateTime.UnixEpoch.Ticks) / (double) TimeSpan.TicksPerSecond;
         }
 
     }
@@ -118,7 +106,6 @@ namespace NightDriver
             r = 254;                // Default to bright magenta instead of black to catch uninit things sooner visually
             g = 0;
             b = 254;
-
         }
 
         public CRGB(byte red, byte green, byte blue)
@@ -152,20 +139,9 @@ namespace NightDriver
             }
         }
 
-        /*
-        public CRGB Blend(CRGB with, double ratio = 0.5f)
-        {
-            Color32 c1 = new Color32(this.r, this.g, this.b, 255);
-            Color32 c2 = new Color32(with.r, with.g, with.b, 255);
-            Color32 c3 = Color32.Lerp(c1, c2, ratio);
-            return new CRGB(c3.r, c3.g, c3.b);
-        }
-        */
-
         public static CRGB Black { get { return new CRGB(0, 0, 0); } }
         public static CRGB White { get { return new CRGB(255, 255, 255); } }
         public static CRGB Grey { get { return new CRGB(160, 160, 160); } }
-
         public static CRGB Red { get { return new CRGB(255, 0, 0); } }
         public static CRGB Maroon { get { return new CRGB(255, 0, 128); } }
         public static CRGB Blue { get { return new CRGB(0, 0, 255); } }
@@ -336,7 +312,7 @@ namespace NightDriver
         public CRGB fadeToBlackBy(double amt)
         {
             CRGB copy = new CRGB(this);
-            double amountToFade = Utilities.constrain(amt, 0.0f, 1.0f);
+            double amountToFade = Math.Clamp(amt, 0.0f, 1.0f);
             copy.scaleColorsDownTo(1.0f - amountToFade);
             return copy;
         }

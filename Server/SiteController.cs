@@ -1,14 +1,25 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Linq;
+//+--------------------------------------------------------------------------
+//
+// NightDriver.Net - (c) 2023 Dave Plummer.  All Rights Reserved.
+//
+// File:        SiteController.cs
+//
+// Description:
+//
+// The object that maintains a connection with the LEDStrip and that can send
+// data to it and get statistics back from it.
+//
+// History:     Dec-18-2023        Davepl      Cleanup
+//
+//---------------------------------------------------------------------------
+
 using System.Diagnostics;
 
 namespace NightDriver
 {
     // ScheduledEffect
     //
-    // An LED effect with scheduling
+    // An LED effect with scheduling; adds a start and stop time to an effect
 
     public class ScheduledEffect
     {
@@ -1070,7 +1081,7 @@ namespace NightDriver
 
         private LightStrip[] _StripControllers =
         {
-            new LightStrip("192.168.8.70", "BENCH", compressData, BENCH_LENGTH, 1, BENCH_START, true, 0, false) { FramesPerBuffer = 24, BatchSize = 1  }  // 216
+            new LightStrip("192.168.8.77", "BENCH", compressData, BENCH_LENGTH, 1, BENCH_START, true, 0, false) { FramesPerBuffer = 24, BatchSize = 1  }  // 216
             //new LightStrip("192.168.8.163", "BENCH", compressData, BENCH_LENGTH, 1, BENCH_START, true, 0, false) {  }  // 216
         }; 
 
@@ -1097,14 +1108,14 @@ namespace NightDriver
 
         private LightStrip[] _StripControllers =
         {
-            new LightStrip("192.168.8.43", "Ceiling A", true, LENGTH, 1, START, true, 0, false) { FramesPerBuffer = 500, BatchSize = 10 },  // 216
+            new LightStrip("192.168.8.43", "Ceiling A", true, LENGTH, 1, START, true, 0, false) { FramesPerBuffer = 500, BatchSize = 20, CompressData = true },  // 216
             //new LightStrip("192.168.8.1", "Ceiling B", true, LENGTH, 1, START, true, 0, false) { FramesPerBuffer = 24, BatchSize = 1  }  // 216
         }; 
 
         public ScheduledEffect[] _LEDEffects = 
         {
 //            new ScheduledEffect(ScheduledEffect.AllDays,  0, 24, new SimpleColorFillEffect(CRGB.White, 1) ),
-            new ScheduledEffect(ScheduledEffect.AllDays,  0, 24, new FireEffect(LENGTH, true) { _Cooling = 80, _speed = 2 }),
+            new ScheduledEffect(ScheduledEffect.AllDays,  0, 24, new FireEffect(LENGTH, true) { _Cooling = 100, _speed = 2 }),
             new ScheduledEffect(ScheduledEffect.AllDays,  0, 24, EffectsDatabase.SubtleColorTwinkleStarEffect ),
 
             //new ScheduledEffect(ScheduledEffect.AllDays,  0, 24, EffectsDatabase.ClassicTwinkle ),
@@ -1300,12 +1311,12 @@ namespace NightDriver
     {
         const bool compressData = true;
         const int TREE_START = 0;
-        const int TREE_LENGTH = 8*144;
+        const int TREE_LENGTH = 1*144;
 
         private CRGB[] _LEDs = InitializePixels<CRGB>(TREE_LENGTH);
         private LightStrip[] _StripControllers =
         {
-            new LightStrip("192.168.8.33", "TREE", compressData, TREE_LENGTH, 1, TREE_START, false, 0, false) { FramesPerBuffer = 500, BatchSize = 10  },
+            new LightStrip("192.168.8.77", "Bonsai Tree", compressData, TREE_LENGTH, 1, TREE_START, false, 0, false) { FramesPerBuffer = 500, BatchSize = 10  },
         };
 
         public ScheduledEffect[] _LEDEffects =
@@ -1317,9 +1328,7 @@ namespace NightDriver
 //            new ScheduledEffect(ScheduledEffect.AllDays,  0, 24,
 //                new MeteorEffect(TREE_LENGTH, false, 1, 1, 0.75, 0.5, 0.5)),
 
-            new ScheduledEffect(ScheduledEffect.AllDays,  0, 24, new SimpleColorFillEffect(CRGB.White, 1)),
-
-               new ScheduledEffect(ScheduledEffect.AllDays,  6, 24,
+            new ScheduledEffect(ScheduledEffect.AllDays,  6, 24,
                     new PaletteEffect( new Palette(new CRGB [] { CRGB.Red, CRGB.Green, CRGB.Blue }))
                         { _LEDColorPerSecond = 20,
                         _LEDScrollSpeed = 3,
@@ -1544,7 +1553,7 @@ namespace NightDriver
             //new ScheduledEffect(ScheduledEffect.AllDays, 0, 24, new SimpleColorFillEffect(new CRGB(64, 255, 128), 1))
             //new ScheduledEffect(ScheduledEffect.AllDays, 0, 24, new PaletteEffect(Palette.Rainbow) { _EveryNthDot = 1, _DotSize = 1, _Density = 0.075/32 * PIXELS_PER_METER144, _LEDColorPerSecond = 0.5 }),
             
-            new ScheduledEffect(ScheduledEffect.AllDays, 0, 24, new PaletteEffect(Palette.Rainbow) 
+            new ScheduledEffect(ScheduledEffect.AllDays, 0, 24, new PaletteEffect(Palette.SmoothRainbow) 
             { 
                 _EveryNthDot = 1, 
                 _DotSize = 1, 

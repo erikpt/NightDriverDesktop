@@ -1,6 +1,17 @@
-﻿using System;
-using System.Threading;
-using NightDriver;
+﻿//+--------------------------------------------------------------------------
+//
+// NightDriver.Net - (c) 2023 Dave Plummer.  All Rights Reserved.
+//
+// File:        LightStrip.cs
+//
+// Description:
+//
+// An LEDController specialization for standard strips.  Provides the ability
+// to reverse layout and to modify the RGB order for this strip
+//
+// History:     Dec-18-2023        Davepl      Cleanup
+//
+//---------------------------------------------------------------------------
 
 namespace NightDriver
 {
@@ -30,8 +41,26 @@ namespace NightDriver
             }
         }
 
-        public LightStrip(string hostName, string friendlyName, bool compressData, uint width, uint height = 1, uint offset = 0, bool reversed = false, byte channel = 0, bool swapRedGreen = false, int batchSize = 1)
-        : base(hostName, friendlyName, width, height, offset, compressData, channel, 0, swapRedGreen, batchSize)
+        public LightStrip(string hostName, 
+                          string friendlyName, 
+                          bool   compressData, 
+                          uint   width, 
+                          uint   height       = 1, 
+                          uint   offset       = 0, 
+                          bool   reversed     = false, 
+                          byte   channel      = 0, 
+                          bool   swapRedGreen = false, 
+                          int    batchSize    = 1)
+        : base(hostName, 
+               friendlyName, 
+               width, 
+               height, 
+               offset, 
+               compressData, 
+               channel, 
+               0, 
+               swapRedGreen, 
+               batchSize)
         {
             Reversed = reversed;
         }

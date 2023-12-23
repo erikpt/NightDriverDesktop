@@ -1,14 +1,19 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using NightDriver;
-
-
-// Palette
+﻿//+--------------------------------------------------------------------------
 //
-// Returns the indexed color from the main palette; interpolates N colors from the X provided
+// NightDriver.Net - (c) 2023 Dave Plummer.  All Rights Reserved.
+//
+// File:        Palette.cs
+//
+// Description:
+//
+// An Palette class that, given a set of colors, can interpolatge across
+// its entire range fractionally from 0-1
+//
+// History:     Dec-18-2023        Davepl      Cleanup
+//
+//---------------------------------------------------------------------------
+
+using NightDriver;
 
 public class Palette
 {

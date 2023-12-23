@@ -78,13 +78,13 @@ namespace NightDriver
         protected override void OnMouseWheel(MouseEventArgs e)
         {
             base.OnMouseWheel(e);
-            xSize = Math.Clamp(xSize + e.Delta/120, 1, 32);
-            ySize = Math.Clamp(ySize + e.Delta/120, 1, 32);
+            xSize = Math.Clamp(xSize + e.Delta/120, 1, 128);
+            ySize = Math.Clamp(ySize + e.Delta/120, 1, 128);
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            e.Graphics.Clear(Color.Black);
+            e.Graphics.Clear(Color.FromArgb(26,26,26));
 
             if (ColorData == null )
             {

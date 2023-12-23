@@ -1,11 +1,12 @@
-﻿        //+--------------------------------------------------------------------------
+﻿//+--------------------------------------------------------------------------
 //  NightDriver - (c) 2019 Dave Plummer.  All Rights Reserved.
 //
 //  File:        Statistics.cs
 //
 //  Description:
 //
-//
+//  Keeps track of things like bytes sent per second, etc.  Knows how to draw
+//  a statisics page to the console if needed.
 //
 //  History:     6/29/2019         Davepl      Created
 //

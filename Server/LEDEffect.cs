@@ -1,6 +1,16 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿//+--------------------------------------------------------------------------
+//
+// NightDriver.Net - (c) 2023 Dave Plummer.  All Rights Reserved.
+//
+// File:        LEDEffect.cs
+//
+// Description:
+//
+//   Represents an effect object that knows how to Render itself
+//   
+// History:     Dec-18-2023        Davepl      Cleanup
+//
+//---------------------------------------------------------------------------
 using NightDriver;
 
 [Serializable]

@@ -2,7 +2,7 @@
 
 namespace ZLIB
 {
-	public class Adler32
+    public class Adler32
     {
         #region "Variables globales"
             private UInt32 a = 1;

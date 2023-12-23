@@ -1,10 +1,8 @@
-﻿using System;
-using System.IO;
-using System.IO.Compression;
+﻿using System.IO.Compression;
 
 namespace ZLIB
 {
-	public sealed class ZLIBStream : Stream
+    public sealed class ZLIBStream : Stream
     {
         #region "Variables globales"
             private CompressionMode mCompressionMode = CompressionMode.Compress;

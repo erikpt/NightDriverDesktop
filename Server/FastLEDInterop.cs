@@ -1,9 +1,21 @@
-﻿using System;
-using System.IO;
-using ZLIB;
-using System.Linq;
-using System.Collections.Generic;
+﻿//+--------------------------------------------------------------------------
+//
+// NightDriver.Net - (c) 2019 Dave Plummer.  All Rights Reserved.
+//
+// File:        LEDInterop.cs
+//
+// Description:
+//
+// Functions for working directly with the color data in an LED string and
+// to compress and uncompress data from the color array
+//
+// History:     Dec-18-2023        Davepl      Cleanup
+//
+//---------------------------------------------------------------------------
+
+
 using System.Collections.Concurrent;
+using ZLIB;
 
 namespace NightDriver
 {
@@ -28,10 +40,6 @@ namespace NightDriver
             }
         }
     }
-
-    // LEDInterop
-    //
-    // Functions fdor working directly with the color data in an LED string
 
     public static class LEDInterop
     {
@@ -65,22 +73,6 @@ namespace NightDriver
                 leds[i] = CRGB.HSV2RGB(hue % 360, 1.0, 1.0);
         }
 
-        // GetColorBytes - get the color data as a packaged up array of bytes
-
-        /*
-        public static byte[] GetColorBytes(CRGB[] leds)
-        {
-            byte[] data = new byte[leds.Length * 3];
-            for (int i = 0; i < leds.Length; i++)
-            {
-                data[i * 3]     = leds[i].r;
-                data[i * 3 + 1] = leds[i].g;
-                data[i * 3 + 2] = leds[i].b;
-            }
-            return data;
-        }
-        */
-
         // GetColorBytesAtOffset
         //
         // Reach into the main array of CRGBs and grab the color bytes for a strand
@@ -104,25 +96,6 @@ namespace NightDriver
             }
             return data;
         }
-
-        // When a strip is physically reversed, it's quicker to extract the color data in the
-        // reverse order in the first place than it is to extracr and reverse it in two steps,
-        // so we provide this methiod to support that
-
-        /*
-        public static byte[] GetColorBytesReversed(CRGB[] leds)
-        {
-            byte[] data = new byte[leds.Length * 3];
-            for (int i = 0; i < leds.Length; i++)
-            {
-                data[i * 3]     = leds[leds.Length - 1 - i].r;
-                data[i * 3 + 1] = leds[leds.Length - 1 - i].g;
-                data[i * 3 + 2] = leds[leds.Length - 1 - i].b;
-            }
-            return data;
-        }
-        */
-        // DWORD and WORD to Bytes - Flatten 16 and 32 bit values to memory
 
         public static byte[] ULONGToBytes(UInt64 input)
         {
