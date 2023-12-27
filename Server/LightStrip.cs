@@ -30,13 +30,13 @@ namespace NightDriver
         {
             get
             {
-                if (null == Location)
+                if (null == StripSite)
                     return 0;
 
-                if (0 == Location.FramesPerSecond)                  // No speed indication yet, can't guess at offset, assume 1 second for now
+                if (0 == StripSite.FramesPerSecond)                  // No speed indication yet, can't guess at offset, assume 1 second for now
                     return 0.0;
 
-                double offset =  (FramesPerBuffer * PercentBufferUse) / Location.FramesPerSecond;
+                double offset =  (FramesPerBuffer * PercentBufferUse) / StripSite.FramesPerSecond;
                 return offset;
             }
         }

@@ -1,4 +1,17 @@
-﻿// 
+﻿//+--------------------------------------------------------------------------
+//
+// NightDriver.Net - (c) 2019 Dave Plummer.  All Rights Reserved.
+//
+// File:        StripListView.cs
+//
+// Description:
+//
+//   Specialization of the listview for use in showing the main strip list.  
+//
+// History:     Dec-23-2023        Davepl      Created
+//
+//---------------------------------------------------------------------------
+
 namespace NightDriver
 {
     internal class StripListView : ListView
@@ -18,21 +31,6 @@ namespace NightDriver
 
             if (m.Msg != 0x14)
                 base.OnNotifyMessage(m);
-        }
-
-        protected override void OnDrawItem(DrawListViewItemEventArgs e)
-        {
-            // Draw the background
-            e.DrawBackground();
-
-            // Draw the item text
-            e.DrawText();
-        }
-
-        protected override void OnDrawSubItem(DrawListViewSubItemEventArgs e)
-        {
-            e.DrawDefault = true;
-            base.OnDrawSubItem(e);
         }
     }
 }

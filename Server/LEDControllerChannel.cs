@@ -81,7 +81,7 @@ namespace NightDriver
         public uint Watts = 0;
         public bool RedGreenSwap = false;
 
-        public Location Location;
+        public Site StripSite;
 
         public SocketResponse Response;
 
@@ -323,10 +323,10 @@ namespace NightDriver
         {
             get
             {
-                if (Location is null)
+                if (StripSite is null)
                     return false;
 
-                if (DataQueue.Count() > Location.FramesPerSecond)                   // If a full second has accumulated
+                if (DataQueue.Count() > StripSite.FramesPerSecond)                   // If a full second has accumulated
                     return true;
 
                 if (DataQueue.Any())

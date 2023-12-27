@@ -1,10 +1,21 @@
-using NightDriver;
+//+--------------------------------------------------------------------------
+//
+// NightDriver.Net - (c) 2019 Dave Plummer.  All Rights Reserved.
+//
+// File:        MainForm.cs
+//
+// Description:
+//
+//   The main WinForms app window, which in turn contains a tab control, 
+//   and those tabs contains the main UI for the app as well as logging etc.
+//
+// History:     Dec-23-2023        Davepl      Created
+//
+//---------------------------------------------------------------------------
+
+
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography.X509Certificates;
-using System.Threading;
-using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TreeView;
 
 namespace NightDriver
 {
@@ -110,12 +121,13 @@ namespace NightDriver
             stripList.Items.Clear();
             foreach (var strip in _server.AllStrips)
             {
-                var typename = strip.Location.GetType().Name;
+                var typename = strip.StripSite.GetType().Name;
                 ListViewGroup group = stripList.Groups[typename];
                 if (group == null)
                     group = stripList.Groups.Add(typename, typename);
                 stripList.Items.Add(new StripListItem(group, strip.FriendlyName, strip));
             }
+            UpdateUIStates();
         }
 
         internal void UpdateListView()
@@ -127,75 +139,11 @@ namespace NightDriver
                 if (item.UpdateColumnText(newItem))
                     stripList.Invalidate();
             }
-        }
-
-        class LEDServer
-        {
-            public Statistics Stats = new Statistics();
-
-            // Main
-            //
-            // Application main loop - starts worker threads
-
-            public List<Location> AllLocations = new List<Location>
-            {
-              new Tree()              { FramesPerSecond = 28 },
-
-              new CeilingStrip        { FramesPerSecond = 30 },
-
-              new Cabana()            { FramesPerSecond = 20 },
-
-              new TV()                { FramesPerSecond = 20 },
-              new ShopCupboards()     { FramesPerSecond = 20 },
-
-              new ShopSouthWindows1() { FramesPerSecond = 2 },
-              new ShopSouthWindows2() { FramesPerSecond = 2 },
-              new ShopSouthWindows3() { FramesPerSecond = 2 },
-            };
-
-            public readonly List<LightStrip> AllStrips = new List<LightStrip>();
-
-            internal void LoadStrips()
-            {
-                AllStrips.Clear();
-                foreach (var location in AllLocations)
-                {
-                    foreach (var strip in location.LightStrips)
-                    {
-                        strip.Location = location;
-                        AllStrips.Add(strip);
-                    }
-                }
-            }
-
-            internal void StartCommunications()
-            {
-                foreach (var location in AllLocations)
-                    foreach (var strip in location.LightStrips)
-                        strip.Start();
-            }
-
-            internal void StopCommunications()
-            {
-                foreach (var location in AllLocations)
-                    foreach (var strip in location.LightStrips)
-                        strip.Stop();
-            }
-
-
-            internal void Start(CancellationToken token)
-            {
-                foreach (var location in AllLocations)
-                    location.StartWorkerThread(token);
-                StartCommunications();
-            }
-
-            internal void Stop(CancellationTokenSource cancelSource)
-            {
-                cancelSource.Cancel();
-                StopCommunications();
-            }
-
+            var comparer = stripList.ListViewItemSorter as StripListItemComparer;
+            if (comparer == null)
+                stripList.ListViewItemSorter = new StripListItemComparer(StripListViewColumnIndex.FIRST);
+            stripList.Sort();
+            UpdateUIStates();
         }
 
         private void stripList_SelectedIndexChanged(object sender, EventArgs e)
@@ -203,264 +151,67 @@ namespace NightDriver
             if (stripList.SelectedIndices.Count > 0)
             {
                 var strip = stripList.SelectedItems[0].Tag as LightStrip;
-                panelVisualizer.ColorData = strip.Location.LEDs;
-                timerVisualizer.Interval = Math.Clamp(1000 / strip.Location.FramesPerSecond, 20, 500);
+                panelVisualizer.ColorData = strip.StripSite.LEDs;
+                timerVisualizer.Interval = Math.Clamp(1000 / strip.StripSite.FramesPerSecond, 20, 500);
             }
+            UpdateUIStates();
         }
 
         private void timerVisualizer_Tick(object sender, EventArgs e)
         {
             panelVisualizer.Invalidate();
         }
-    }
-}
 
-class StripListItem : ListViewItem
-{
-    public enum ColumnIndex
-    {
-        INVALID = -1,
-        FIRST = 1,
-        iHost = 1,
-        iHasSocket,
-        iWiFiSignal,
-        iReadyForData,
-        iBytesPerSecond,
-        iCurrentClock,
-        iBufferPos,
-        iWatts,
-        iFpsDrawing,
-        iTimeOffset,
-        iConnects,
-        iQueueDepth,
-        iCurrentEffect,
-        MAX = iCurrentEffect
-    };
+        private void checkGroupItems_CheckedChanged(object sender, EventArgs e)
+        {
+            stripList.ShowGroups = checkGroupItems.Checked;
+            FillListView();
+        }
 
-    public string Host
-    {
-        get
+        private void stripList_ColumnClick(object sender, ColumnClickEventArgs e)
         {
-            return SubItems[(int)ColumnIndex.iHost].Text;
-        }
-        set
-        {
-            SubItems[(int)ColumnIndex.iHost].Text = value;
-        }
-    }
+            var comparer = stripList.ListViewItemSorter as StripListItemComparer;
+            if (comparer != null && comparer.Column == (StripListViewColumnIndex)e.Column)
+                comparer.ToggleSortOrder();
+            else
+                stripList.ListViewItemSorter = new StripListItemComparer((StripListViewColumnIndex)e.Column);
 
-    public string HasSocket
-    {
-        get
-        {
-            return SubItems[(int)ColumnIndex.iHasSocket].Text;
+            stripList.Sort();
         }
-        set
-        {
-            SubItems[(int)ColumnIndex.iHasSocket].Text = value;
-        }
-    }
 
-    public string WiFiSignal
-    {
-        get
+        private void UpdateUIStates()
         {
-            return SubItems[(int)ColumnIndex.iWiFiSignal].Text;
-        }
-        set
-        {
-            SubItems[(int)ColumnIndex.iWiFiSignal].Text = value;
-        }
-    }
+            checkGroupItems.Checked = stripList.ShowGroups;
+            checkGroupItems.Enabled = stripList.Groups.Count > 0;
 
-    public string ReadyForData
-    {
-        get
-        {
-            return SubItems[(int)ColumnIndex.iReadyForData].Text;
-        }
-        set
-        {
-            SubItems[(int)ColumnIndex.iReadyForData].Text = value;
-        }
-    }
+            buttonPreviousEffect.Enabled = stripList.SelectedIndices.Count == 1;
+            buttonNextEffect.Enabled = stripList.SelectedIndices.Count == 1;
 
-    public string BytesPerSecond
-    {
-        get
-        {
-            return SubItems[(int)ColumnIndex.iBytesPerSecond].Text;
-        }
-        set
-        {
-            SubItems[(int)ColumnIndex.iBytesPerSecond].Text = value;
-        }
-    }
+            buttonDeleteStrip.Enabled = stripList.SelectedIndices.Count > 0;
+            buttonEditStrip.Enabled = stripList.SelectedIndices.Count == 1;
 
-    public string CurrentClock
-    {
-        get
-        {
-            return SubItems[(int)ColumnIndex.iCurrentClock].Text;
-        }
-        set
-        {
-            SubItems[(int)ColumnIndex.iCurrentClock].Text = value;
-        }
-    }
+            buttonNewStrip.Enabled = true;
 
-    public string BufferPos
-    {
-        get
-        {
-            return SubItems[(int)ColumnIndex.iBufferPos].Text;
         }
-        set
-        {
-            SubItems[(int)ColumnIndex.iBufferPos].Text = value;
-        }
-    }
 
-    public string Watts
-    {
-        get
+        private void buttonPreviousEffect_Click(object sender, EventArgs e)
         {
-            return SubItems[(int)ColumnIndex.iWatts].Text;
+            var strip = stripList.SelectedItems[0].Tag as LightStrip;
+            strip.StripSite.PreviousEffect();
         }
-        set
-        {
-            SubItems[(int)ColumnIndex.iWatts].Text = value;
-        }
-    }
 
-    public string FpsDrawing
-    {
-        get
+        private void buttonNextEffect_Click(object sender, EventArgs e)
         {
-            return SubItems[(int)ColumnIndex.iFpsDrawing].Text;
-        }
-        set
-        {
-            SubItems[(int)ColumnIndex.iFpsDrawing].Text = value;
-        }
-    }
+            var strip = stripList.SelectedItems[0].Tag as LightStrip;
+            strip.StripSite.NextEffect();
 
-    public string TimeOffset
-    {
-        get
-        {
-            return SubItems[(int)ColumnIndex.iTimeOffset].Text;
         }
-        set
+
+        private void buttonDeleteStrip_Click(object sender, EventArgs e)
         {
-            SubItems[(int)ColumnIndex.iTimeOffset].Text = value;
+            var strip = stripList.SelectedItems[0].Tag as LightStrip;
+            _server.RemoveStrip(strip);
+            FillListView();
         }
-    }
-
-    public string Connects
-    {
-        get
-        {
-            return SubItems[(int)ColumnIndex.iConnects].Text;
-        }
-        set
-        {
-            SubItems[(int)ColumnIndex.iConnects].Text = value;
-        }
-    }
-
-    public string QueueDepth
-    {
-        get
-        {
-            return SubItems[(int)ColumnIndex.iQueueDepth].Text;
-        }
-        set
-        {
-            SubItems[(int)ColumnIndex.iQueueDepth].Text = value;
-        }
-    }
-
-    public string CurrentEffect
-    {
-        get
-        {
-            return SubItems[(int)ColumnIndex.iCurrentEffect].Text;
-        }
-        set
-        {
-            SubItems[(int)ColumnIndex.iCurrentEffect].Text = value;
-        }
-    }
-
-    public string Location
-    {
-        get
-        {
-            return Text;
-        }
-        set
-        {
-            Text = value;
-            Group = new ListViewGroup(value);
-        }
-    }
-
-
-    // UpdateColumnText
-
-    public bool UpdateColumnText(StripListItem other, ColumnIndex idx = ColumnIndex.INVALID)
-    {
-        if (idx == ColumnIndex.INVALID)
-        {
-            bool bChanged = false;
-            for (int i = 0; i < SubItems.Count; i++)
-                bChanged |= UpdateColumnText(other, (ColumnIndex)i);
-            return bChanged;
-        }
-        else
-        {
-            if (SubItems[(int)idx].Text != other.SubItems[(int)idx].Text)
-            {
-                SubItems[(int)idx].Text = other.SubItems[(int)idx].Text;
-                return true;
-            }
-            return false;
-        }
-    }
-
-    public StripListItem(ListViewGroup group, String text, LightStrip strip)
-    {
-        Text = text;
-        Group = group;
-        Tag = strip;
-
-        for (ColumnIndex i = 0; i < ColumnIndex.MAX; i++)
-            SubItems.Add(new ListViewItem.ListViewSubItem(this, "---"));
-    }
-
-    public static StripListItem CreateForStrip(ListViewGroup group, LightStrip strip)
-    {
-        double epoch = (DateTime.UtcNow.Ticks - DateTime.UnixEpoch.Ticks) / (double)TimeSpan.TicksPerSecond;
-        var item = new StripListItem(group, strip.FriendlyName, strip);
-
-        item.Host           = strip.HostName;
-        item.HasSocket      = !strip.HasSocket ? "No"   : "Open";
-        item.WiFiSignal     = !strip.HasSocket ? "--- " : strip.Response.wifiSignal.ToString();
-        item.ReadyForData   = !strip.HasSocket ? "--- " : strip.ReadyForData ? "Ready" : "No";
-        item.BytesPerSecond = !strip.HasSocket ? "--- " : strip.BytesPerSecond.ToString();
-        item.CurrentClock   = !strip.HasSocket ? "--- " : strip.Response.currentClock > 8 ? (strip.Response.currentClock - epoch).ToString("F2") : "UNSET";
-        item.BufferPos      = !strip.HasSocket ? "--- " : strip.Response.bufferPos.ToString() + "/" + strip.Response.bufferSize.ToString();
-        item.Watts          = !strip.HasSocket ? "--- " : strip.Response.watts.ToString();
-        item.FpsDrawing     = !strip.HasSocket ? "--- " : strip.Response.fpsDrawing.ToString();
-        item.TimeOffset     = !strip.HasSocket ? "--- " : strip.TimeOffset.ToString();
-        item.Connects       = strip.Connects.ToString();
-        item.QueueDepth     = strip.QueueDepth.ToString();
-        item.CurrentEffect  = strip.Location.CurrentEffectName;
-        item.Group = group;
-
-        Debug.Assert(item.Tag == strip);
-        
-        return item;
     }
 }

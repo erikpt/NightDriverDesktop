@@ -1,11 +1,17 @@
-﻿using NightDriver;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.DirectoryServices.ActiveDirectory;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿//+--------------------------------------------------------------------------
+//
+// NightDriver.Net - (c) 2019 Dave Plummer.  All Rights Reserved.
+//
+// File:        LEDVisualizer.cs
+//
+// Description:
+//
+//   A custom control that renders the color data from a strip in a visual
+//   window, with squares representing the LEDs in the strip.
+//
+// History:     Dec-23-2023        Davepl      Created
+//
+//---------------------------------------------------------------------------
 
 namespace NightDriver
 {

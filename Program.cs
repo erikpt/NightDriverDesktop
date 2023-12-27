@@ -1,15 +1,25 @@
+//+--------------------------------------------------------------------------
+//
+// NightDriver.Net - (c) 2019 Dave Plummer.  All Rights Reserved.
+//
+// File:        Program.cs
+//
+// Description:
+//
+//   A WinForms app that hosts a server that can be used to control LED strips
+//   via a network connection. 
+//
+// History:     Dec-23-2023        Davepl      Created
+//
+//---------------------------------------------------------------------------
+
 namespace NightDriver
 {
     internal static class Program
     {
-        /// <summary>
-        ///  The main entry point for the application.
-        /// </summary>
         [STAThread]
         static void Main()
         {
-            // To customize application configuration such as set high DPI settings or default font,
-            // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
             Application.Run(new MainForm());
         }

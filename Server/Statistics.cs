@@ -103,7 +103,7 @@ namespace NightDriver
             return (ratio > 0 ? Filled.Substring(0, (int)(ratio * maxLen)) : "") + Empty.Substring(0, Math.Max(0, maxLen - (int)(ratio * maxLen)));
         }
 
-        public void Render(Location[] sites)
+        public void Render(Site[] sites)
         {
             // Detect no console and return without trying to render anything
 
@@ -172,10 +172,10 @@ namespace NightDriver
                 printf_xy(x, y + 10 + topMargin, allControllers[slot - 1].Response.fpsDrawing.ToString());
                 printf_xy(x, y + 11 + topMargin, allControllers[slot - 1].Connects.ToString() + " ");
                 printf_xy(x, y + 12 + topMargin, allControllers[slot - 1].QueueDepth.ToString() + " ");
-                if (allControllers[slot - 1].Location != null)
+                if (allControllers[slot - 1].StripSite != null)
                 {
-                    printf_xy(x, y + 13 + topMargin, allControllers[slot - 1].TimeOffset.ToString("F2") + " [" + allControllers[slot - 1].Location.FramesPerSecond + "]");
-                    printf_xy(x, y + 14 + topMargin, allControllers[slot - 1].Location.CurrentEffectName.Left(ColumnWidth-1));
+                    printf_xy(x, y + 13 + topMargin, allControllers[slot - 1].TimeOffset.ToString("F2") + " [" + allControllers[slot - 1].StripSite.FramesPerSecond + "]");
+                    printf_xy(x, y + 14 + topMargin, allControllers[slot - 1].StripSite.CurrentEffectName.Left(ColumnWidth-1));
                 }
             }
 
@@ -211,8 +211,8 @@ namespace NightDriver
             string bar = Bar(ratio, maxLen);
             printf_xy(leftMargin, topLine + 1, bar);
 
-            printf_xy(0, topLine + 2, "Miliseconds Spare: " + Location.MinimumSpareTime.ToString() + "       ");
-            double ratio2 = Location.MinimumSpareTime / 40.0;
+            printf_xy(0, topLine + 2, "Miliseconds Spare: " + Site.MinimumSpareTime.ToString() + "       ");
+            double ratio2 = Site.MinimumSpareTime / 40.0;
             if (ratio2 > 1)
                 ratio2 = 1;
             string bar2 = Bar(ratio2, maxLen);

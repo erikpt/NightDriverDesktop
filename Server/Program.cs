@@ -56,18 +56,15 @@ namespace NightDriver
         //
         // Application main loop - starts worker threads
 
-        internal static Location [] g_AllSites =  
+        internal static Site [] g_AllSites =  
         { 
           new CeilingStrip   { FramesPerSecond = 30 }, 
-          new ChristmasTruck      { FramesPerSecond = 45 }, 
-          new Pillars()           { FramesPerSecond = 30 },
           
           new Cabana()            { FramesPerSecond = 28 },
 
           new Bench()             { FramesPerSecond = 28 },
           
           new TV()                { FramesPerSecond = 30 },
-          new Demo()              { FramesPerSecond = 30 }, 
           new ShopCupboards()     { FramesPerSecond = 20 },  
         
           new ShopSouthWindows1() { FramesPerSecond = 2 },  
@@ -75,7 +72,7 @@ namespace NightDriver
           new ShopSouthWindows3() { FramesPerSecond = 2 },  
         };
 
-        public static Location[] Locations
+        public static Site[] Locations
         {
             get
             {

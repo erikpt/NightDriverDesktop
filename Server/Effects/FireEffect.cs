@@ -21,7 +21,7 @@ public class FireEffect : LEDEffect
 
     public Random _rand = new Random();
 
-    public FireEffect(uint cSize, bool bMirrored, uint cellsPerLED = 1, uint speed = 1, Palette palette = null)
+    public FireEffect(uint cSize, bool bMirrored, uint cellsPerLED = 1, uint speed = 1, Palette? palette = null)
     {
         _CellsPerLED = cellsPerLED;
 
@@ -29,6 +29,7 @@ public class FireEffect : LEDEffect
         _Mirrored = bMirrored;
         _Palette  = palette;
         _speed    = speed;
+        _Temperatures = null;
     }
 
     DateTime _lastUpdate = DateTime.UtcNow;
