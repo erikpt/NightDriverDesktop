@@ -94,7 +94,6 @@ namespace NightDriver
                                   ref preference, sizeof(uint));
 
             InitializeComponent();
-            _server.LoadStrips();
             FillListView();
             timerListView.Start();
             timerVisualizer.Start();
@@ -115,18 +114,18 @@ namespace NightDriver
         internal void FillListView()
         {
             stripList.Groups.Clear();
-            //foreach (var location in _server.AllLocations)
-            //    stripList.Groups.Add(new ListViewGroup(location.GetType().Name));
-
             stripList.Items.Clear();
+
             foreach (var strip in _server.AllStrips)
             {
-                var typename = strip.StripSite.GetType().Name;
-                ListViewGroup group = stripList.Groups[typename];
+                var name = strip.StripSite.Name;
+                ListViewGroup group = stripList.Groups[name];
                 if (group == null)
-                    group = stripList.Groups.Add(typename, typename);
+                    group = stripList.Groups.Add(name, name);
                 stripList.Items.Add(new StripListItem(group, strip.FriendlyName, strip));
             }
+            if (stripList.Items.Count > 0)
+                stripList.Items[0].Selected = true;
             UpdateUIStates();
         }
 
@@ -187,11 +186,9 @@ namespace NightDriver
             buttonPreviousEffect.Enabled = stripList.SelectedIndices.Count == 1;
             buttonNextEffect.Enabled = stripList.SelectedIndices.Count == 1;
 
-            buttonDeleteStrip.Enabled = stripList.SelectedIndices.Count > 0;
-            buttonEditStrip.Enabled = stripList.SelectedIndices.Count == 1;
-
-            buttonNewStrip.Enabled = true;
-
+            buttonDeleteStrip.Enabled = !_server.IsRunning && stripList.SelectedIndices.Count > 0;
+            buttonEditStrip.Enabled = !_server.IsRunning && stripList.SelectedIndices.Count == 1;
+            buttonNewStrip.Enabled = !_server.IsRunning;
         }
 
         private void buttonPreviousEffect_Click(object sender, EventArgs e)
@@ -211,6 +208,23 @@ namespace NightDriver
         {
             var strip = stripList.SelectedItems[0].Tag as LightStrip;
             _server.RemoveStrip(strip);
+            FillListView();
+        }
+
+        private void saveToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            _server.SaveStrips();
+        }
+
+        private void openToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            _server.LoadStrips();
+            FillListView();
+        }
+
+        private void loadDemoFileToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            _server.LoadStripsFromTable();
             FillListView();
         }
     }

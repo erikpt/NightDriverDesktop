@@ -12,11 +12,19 @@
 //
 //---------------------------------------------------------------------------
 
+using System.Security.Policy;
+using System.Text.Json;
+using static NightDriver.LEDServer;
+
 namespace NightDriver
 {
     class LEDServer
     {
-        private bool _bRunning = false;
+        public bool IsRunning
+        {
+            get;
+            private set;
+        } = false;
 
         public Statistics Stats = new Statistics();
 
@@ -24,7 +32,7 @@ namespace NightDriver
         //
         // Application main loop - starts worker threads
 
-        public List<Site> AllLocations = new List<Site>
+        private List<Site> SampleLocations = new List<Site>
         {
             new Tree()              { FramesPerSecond = 28 },
 
@@ -40,13 +48,72 @@ namespace NightDriver
             new ShopSouthWindows3() { FramesPerSecond = 2 },
         };
 
-        public List<LightStrip> AllStrips = new List<LightStrip>();
-
-        internal void LoadStrips()
+        internal class _Installation
         {
-            AllStrips.Clear();
-            foreach (var location in AllLocations)
+            public List<LightStrip> _AllStrips { get; set; }
+            public Dictionary<String, Site> _AllSites { get; set; }
+        };
+
+        public List<LightStrip> AllStrips = new List<LightStrip>();
+        public Dictionary<String, Site> AllSites = new Dictionary<String, Site>();
+
+        internal bool SaveStrips()
+        {
+            try
             {
+                var options = new JsonSerializerOptions
+                {
+                    WriteIndented = true // For better readability of the output
+                };
+                string jsonString = JsonSerializer.Serialize(AllSites, options);
+                File.WriteAllText("AllStrips.json", jsonString); // Write to a file
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during serialization: {ex.Message}");
+                return false;
+            }
+        }
+
+        public bool LoadStrips()
+        {
+            try
+            {
+                string jsonString = File.ReadAllText("AllStrips.json");
+                AllSites = JsonSerializer.Deserialize<Dictionary<string, Site>>(jsonString);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during deserialization: {ex.Message}");
+                return false;
+            }
+
+            // Go through each of the Site objects and see if we have a matching Site already
+            // in the AllSites dictionary.  If not, add it, and if so, add the strips to the
+            // existing site.
+
+            foreach (var site in AllSites.Values)
+            {
+                foreach (var strip in site.LightStrips)
+                {
+                    strip.StripSite = site;
+                    AllStrips.Add(strip);
+                }
+            }
+
+            return true;
+        }
+
+        internal void LoadStripsFromTable()
+        {
+            AllSites.Clear();
+            AllStrips.Clear();
+
+            foreach (var location in SampleLocations)
+            {
+                AllSites[location.Name] = location;
+
                 foreach (var strip in location.LightStrips)
                 {
                     strip.StripSite = location;
@@ -57,14 +124,14 @@ namespace NightDriver
 
         private void StartCommunications()
         {
-            foreach (var location in AllLocations)
+            foreach (var location in SampleLocations)
                 foreach (var strip in location.LightStrips)
                     strip.Start();
         }
 
         private void StopCommunications()
         {
-            foreach (var location in AllLocations)
+            foreach (var location in SampleLocations)
                 foreach (var strip in location.LightStrips)
                     strip.Stop();
         }
@@ -72,8 +139,8 @@ namespace NightDriver
 
         internal void Start(CancellationToken token)
         {
-            _bRunning = true;
-            foreach (var location in AllLocations)
+            IsRunning = true;
+            foreach (var location in SampleLocations)
                 location.StartWorkerThread(token);
             StartCommunications();
         }
@@ -82,13 +149,13 @@ namespace NightDriver
         {
             cancelSource.Cancel();
             StopCommunications();
-            _bRunning = false;
+            IsRunning = false;
         }
 
         public void RemoveStrip(LightStrip strip)
         {
             strip.Stop();
-            var siteContainingStrip = AllLocations.FirstOrDefault(site => site.LightStrips.Contains(strip));
+            var siteContainingStrip = SampleLocations.FirstOrDefault(site => site.LightStrips.Contains(strip));
             siteContainingStrip.LightStrips.Remove(strip);
             AllStrips.Remove(strip);
         }

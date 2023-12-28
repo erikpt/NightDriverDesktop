@@ -28,6 +28,7 @@ using System.IO;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Diagnostics;
+using System.Text.Json.Serialization;
 // LEDControllerChannel
 //
 // Exposes ILEDGraphics via the GraphicsBase baseclass
@@ -68,30 +69,34 @@ namespace NightDriver
         }
     };
 
+    [Serializable]
     public class LEDControllerChannel
     {
         private CancellationTokenSource _cancellationTokenSource;
 
-        public string HostName;
-        public string FriendlyName;
-        public bool CompressData = true;
-        public byte Channel = 0;
-        public double Brightness = 1.0f;
-        public uint Connects = 0;
-        public uint Watts = 0;
-        public bool RedGreenSwap = false;
+        public string HostName      { get; set; }
+        public string FriendlyName  { get; set; }
+        public bool   CompressData  { get; set; } = true;
+        public byte   Channel       { get; set; } = 0;
+        public double Brightness    { get; set; } = 1.0f;
+        public uint   Connects      { get; set; } = 0;
+        public uint   Watts         { get; set; } = 0;
+        public bool   RedGreenSwap  { get; set; } = false;
+        public int    BatchSize     { get; set; } = 1;
+        public double BatchTimeout  { get; set; } = 1.00;
 
-        public Site StripSite;
 
+        [JsonIgnore]
+        public Site StripSite       { get; set; }
+
+        [JsonIgnore]
         public SocketResponse Response;
-
-        public int BatchSize = 1;
-        public const double BatchTimeout = 1.00;
-
+          
         private ConcurrentQueue<byte[]> DataQueue = new ConcurrentQueue<byte[]>();
 
         private Thread _Worker;
 
+        [JsonIgnore]
         public int QueueDepth
         {
             get
@@ -160,7 +165,7 @@ namespace NightDriver
 
         // Stop
         //
-        // Signals the worker thread to exit, waits for it, and closes the socket (if open)
+        // Signals the worker thread to exit and closes the socket (if open)
 
         public bool Stop()
         {
@@ -181,6 +186,7 @@ namespace NightDriver
             return true;
         }
 
+        [JsonIgnore]
         public bool HasSocket       // Is there a socket at all yet?
         {
             get
@@ -192,7 +198,7 @@ namespace NightDriver
             }
         }
 
-
+        [JsonIgnore]
         public bool ReadyForData    // Is there a socket and is it connected to the chip?
         {
             get
@@ -207,8 +213,10 @@ namespace NightDriver
             }
         }
 
-        public uint MinimumSpareTime => (uint)_HostControllerSockets.Min(controller => controller.Value.BytesPerSecond);
+        [JsonIgnore]
+        public uint MinimumSpareTime => _HostControllerSockets.Count > 0 ? (uint)_HostControllerSockets.Min(controller => controller.Value.BytesPerSecond) : 0;
 
+        [JsonIgnore]
         public uint BytesPerSecond
         {
             get
@@ -219,9 +227,10 @@ namespace NightDriver
                 return controllerSocket.BytesPerSecond;
             }
         }
+        [JsonIgnore]
+        public uint TotalBytesPerSecond => _HostControllerSockets.Count > 0 ? (uint)_HostControllerSockets.Sum(controller => controller.Value.BytesPerSecond) : 0;
 
-        public uint TotalBytesPerSecond => (uint)_HostControllerSockets.Sum(controller => controller.Value.BytesPerSecond);
-
+        [JsonIgnore]
         public ControllerSocket ControllerSocket
         {
             get

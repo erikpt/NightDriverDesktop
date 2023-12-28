@@ -13,19 +13,22 @@
 //
 //---------------------------------------------------------------------------
 
+using System.Text.Json.Serialization;
+
 namespace NightDriver
 {
+    [Serializable]
     public class LightStrip : LEDControllerChannel
     {
-        public uint FramesPerBuffer  = 21;                      // How many buffer frames the chips have
-        
-        public const double PercentBufferUse = 0.75;            // How much of the buffer we should use up
+        public uint FramesPerBuffer { get; set; } = 21;                      // How many buffer frames the chips have
+        public double PercentBufferUse { get; set; } = 0.75;            // How much of the buffer we should use up
 
         // The only attribute that a light strip adds is that it can be reversed, as you
         // could hand it from either end
 
         public bool Reversed { get; set; } = false;
 
+        [JsonIgnore]
         public double TimeOffset
         {
             get
@@ -49,7 +52,7 @@ namespace NightDriver
                           uint   offset       = 0, 
                           bool   reversed     = false, 
                           byte   channel      = 0, 
-                          bool   swapRedGreen = false, 
+                          bool   redGreenSwap = false, 
                           int    batchSize    = 1)
         : base(hostName, 
                friendlyName, 
@@ -59,7 +62,7 @@ namespace NightDriver
                compressData, 
                channel, 
                0, 
-               swapRedGreen, 
+               redGreenSwap, 
                batchSize)
         {
             Reversed = reversed;

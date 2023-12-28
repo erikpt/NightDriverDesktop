@@ -15,6 +15,7 @@
 
 using System.Diagnostics;
 using System.Security.Policy;
+using System.Text.Json.Serialization;
 
 namespace NightDriver
 {
@@ -28,77 +29,81 @@ namespace NightDriver
         public const DayOfWeek WeekDays = DayOfWeek.Monday | DayOfWeek.Tuesday | DayOfWeek.Wednesday | DayOfWeek.Thursday | DayOfWeek.Friday;
         public const DayOfWeek AllDays = WeekDays | WeekEnds;
 
-        protected LEDEffect _LEDEffect;
-        protected DayOfWeek _DaysOfWeeks;
-        protected uint _StartHour;
-        protected uint _EndHour;
-        protected uint _StartMinute;
-        protected uint _EndMinute;
+        public LEDEffect Effect { get; private set;  }
 
-        public ScheduledEffect(DayOfWeek daysOfWeek, uint startHour, uint endHour, LEDEffect ledEffect, uint startMinute = 0, uint endMinute = 60)
+        public DayOfWeek DaysOfWeek { get; private set; }
+        public uint StartHour { get; private set; }
+        public uint EndHour { get; private set; }
+        public uint StartMinute { get; private set; }
+        public uint EndMinute { get; private set; }
+
+        public ScheduledEffect(DayOfWeek daysOfWeek, uint startHour, uint endHour, LEDEffect effect, uint startMinute = 0, uint endMinute = 60)
         {
-            _DaysOfWeeks = daysOfWeek;
-            _LEDEffect = ledEffect;
-            _StartHour = startHour;
-            _EndHour = endHour;
+            DaysOfWeek  = daysOfWeek;
+            Effect      = effect;
+            StartHour   = startHour;
+            EndHour     = endHour;
+            StartMinute = startMinute;
+            EndMinute   = endMinute;
         }
 
+        [JsonIgnore]
         public bool ShouldEffectRunNow
         {
             get
             {
-                if (_DaysOfWeeks.HasFlag(DateTime.Now.DayOfWeek))
-                    if (DateTime.Now.Hour > _StartHour || DateTime.Now.Hour == _StartHour && DateTime.Now.Minute >= _StartMinute)
-                        if (DateTime.Now.Hour < _EndHour || DateTime.Now.Hour == _EndHour && DateTime.Now.Minute <= _EndMinute)
+                if (DaysOfWeek.HasFlag(DateTime.Now.DayOfWeek))
+                    if (DateTime.Now.Hour > StartHour || DateTime.Now.Hour == StartHour && DateTime.Now.Minute >= StartMinute)
+                        if (DateTime.Now.Hour < EndHour || DateTime.Now.Hour == EndHour && DateTime.Now.Minute <= EndMinute)
                             return true;
 
                 return false;
             }
         }
 
+        [JsonIgnore]
         public uint MinutesRunning
         {
             get
             {
                 uint c = 0;
-                if (DateTime.Now.Hour > _StartHour)
-                    c += ((uint)DateTime.Now.Hour - _StartHour) * 60;
-                if (DateTime.Now.Minute >= _StartMinute)
-                    c += ((uint)DateTime.Now.Minute - _StartMinute);
+                if (DateTime.Now.Hour > StartHour)
+                    c += ((uint)DateTime.Now.Hour - StartHour) * 60;
+                if (DateTime.Now.Minute >= StartMinute)
+                    c += ((uint)DateTime.Now.Minute - StartMinute);
                 return c;
             }
         }
 
-        public LEDEffect LEDEffect
-        {
-            get
-            {
-                return _LEDEffect;
-            }
-        }
     }
 
-    // Location
+    // Site
     //
-    // A "location" is a set of one or more LED strip controllers and the effects that will run on them.  It
+    // A "site" is a location where one or more LED strip controllers and the effects that will run on them.  It
     // implements the "GraphicsBase" interface so that the effects can draw upon the "site" as a whole,
     // and it is later divied up to the various controllers.  So if you have 4000 LEDs, you might have
     // four strips with 1000 LEDs each, for example.  Combined with a list of effects, they consitute a site.
+    //
+    // Put more simply, a site is a collection of strips, and each strip normally begins at its own offset
+    // in the larger site.  So if you have 4000 LEDs, you might have four strips with 1000 LEDs each, for example.
+    // Combined with a list of effects, they consitute a site.
 
+    [Serializable]
     public class Site : GraphicsBase
     {
-        protected CancellationToken _token;
-        protected DateTime StartTime;
-        public    System.Threading.Thread _Thread;
+        public System.Threading.Thread _Thread;
+        public virtual String Name { get; private set; }
+        public List<LightStrip> LightStrips { get; set; } = new List<LightStrip>();
+        public List<ScheduledEffect> LEDEffects { get; set; } = new List<ScheduledEffect>();
+
+        [JsonIgnore]
         public virtual CRGB[] LEDs { get; }
 
-        public virtual List<LightStrip> LightStrips { get; }
-        public virtual ScheduledEffect[] LEDEffects { get; }
-        
         public const int PIXELS_PER_METER144 = 144;
 
-        public Site()
+        public Site(String name)
         {
+            Name = name;
             StartTime = DateTime.Now;
         }
 
@@ -106,6 +111,9 @@ namespace NightDriver
         {
             get; set;
         } = 22;
+
+        protected CancellationToken _token;
+        protected DateTime StartTime;
 
         protected int SecondsPerEffect
         {
@@ -118,7 +126,7 @@ namespace NightDriver
         public uint SpareTime
         {
             get;
-            set;
+            private set;
         } = 1000;
 
         public int _iEffectOffset = 0;
@@ -197,7 +205,7 @@ namespace NightDriver
             _Thread.Start();
         }
 
-
+        [JsonIgnore]
         public string CurrentEffectName
         {
             get;
@@ -220,8 +228,8 @@ namespace NightDriver
                 // get half-rendered frames in the LEDVisualizer
 
                 lock (LEDs)
-                    effect.LEDEffect.DrawFrame(this);
-                CurrentEffectName = effect.LEDEffect.GetType().Name;
+                    effect.Effect.DrawFrame(this);
+                CurrentEffectName = effect.Effect.GetType().Name;
                 if ((DateTime.UtcNow - timeStart2).TotalSeconds > 0.25)
                     ConsoleApp.Stats.WriteLine("MAIN3 DELAY");
             }
@@ -920,7 +928,7 @@ namespace NightDriver
     // Location definitio for the lights on the eaves of the Cabana
 
     public class Cabana : Site
-    {
+    { 
         const bool compressData = true;
         const int CABANA_START = 0;
         const int CABANA_1 = CABANA_START;
@@ -934,58 +942,50 @@ namespace NightDriver
         const int CABANA_LENGTH = CABANA_1_LENGTH + CABANA_2_LENGTH + CABANA_3_LENGTH + CABANA_4_LENGTH;
 
         private CRGB[] _LEDs = InitializePixels<CRGB>(CABANA_LENGTH);
-
-        private List<LightStrip> _StripControllers = new List<LightStrip>()
-        {
-            new LightStrip("192.168.8.36", "CBWEST1", compressData, CABANA_1_LENGTH, 1, CABANA_1, false)  { FramesPerBuffer = 312, BatchSize = 10 },      
-            new LightStrip("192.168.8.5", "CBEAST1", compressData, CABANA_2_LENGTH, 1, CABANA_2, true)    { FramesPerBuffer = 312, BatchSize = 10 },      
-            new LightStrip("192.168.8.37", "CBEAST2", compressData, CABANA_3_LENGTH, 1, CABANA_3, false)  { FramesPerBuffer = 312, BatchSize = 10 },      
-            new LightStrip("192.168.8.31", "CBEAST3", compressData, CABANA_4_LENGTH, 1, CABANA_4, false)  { FramesPerBuffer = 312, BatchSize = 10 },      
-        };
-
+        
         public ScheduledEffect[] _GameDayLEDEffects =
         {
-            // Intense Effects for Daytime Hours
-
             new ScheduledEffect(ScheduledEffect.AllDays,  9, 22,  EffectsDatabase.Football_Effect_Seattle),
         };
- 
 
-        public ScheduledEffect[] _LEDEffects =
+        public Cabana() : base("Cabana")
         {
-            // Uncomment to test a single effect
-
-            new ScheduledEffect(ScheduledEffect.AllDays,  22, 23, new SimpleColorFillEffect(CRGB.RandomSaturatedColor.fadeToBlackBy(0.50f), 2)),
-            new ScheduledEffect(ScheduledEffect.AllDays,  23, 24, new SimpleColorFillEffect(CRGB.RandomSaturatedColor.fadeToBlackBy(0.60f), 2)),
-            new ScheduledEffect(ScheduledEffect.AllDays,  0,  1,  new SimpleColorFillEffect(CRGB.RandomSaturatedColor.fadeToBlackBy(0.70f), 4)),
-            new ScheduledEffect(ScheduledEffect.AllDays,  1,  2,  new SimpleColorFillEffect(CRGB.RandomSaturatedColor.fadeToBlackBy(0.80f), 4)),
-            new ScheduledEffect(ScheduledEffect.AllDays,  2,  3,  new SimpleColorFillEffect(CRGB.RandomSaturatedColor.fadeToBlackBy(0.90f), 4)),
-            new ScheduledEffect(ScheduledEffect.AllDays,  3,  4,  new SimpleColorFillEffect(CRGB.RandomSaturatedColor.fadeToBlackBy(0.80f), 4)),
-            new ScheduledEffect(ScheduledEffect.AllDays,  4,  5,  new SimpleColorFillEffect(CRGB.RandomSaturatedColor.fadeToBlackBy(0.70f), 3)),
-            new ScheduledEffect(ScheduledEffect.AllDays,  5,  6,  new SimpleColorFillEffect(CRGB.RandomSaturatedColor.fadeToBlackBy(0.60f), 2)),
-            new ScheduledEffect(ScheduledEffect.AllDays,  6,  7,  new SimpleColorFillEffect(CRGB.RandomSaturatedColor.fadeToBlackBy(0.50f), 2)),
-            new ScheduledEffect(ScheduledEffect.AllDays,  7,  8,  new SimpleColorFillEffect(CRGB.RandomSaturatedColor.fadeToBlackBy(0.40f), 2)),
-
-
-            new ScheduledEffect(ScheduledEffect.AllDays,  8, 22, EffectsDatabase.SubtleColorTwinkleStarEffect ),
-
-            new ScheduledEffect(ScheduledEffect.AllDays,  8, 22, EffectsDatabase.OneDirectionStars ),
-            new ScheduledEffect(ScheduledEffect.AllDays,  8, 22, EffectsDatabase.ColorFadeMiniLites ),
-            new ScheduledEffect(ScheduledEffect.AllDays,  8, 22, EffectsDatabase.ColorCycleTube ),
-            new ScheduledEffect(ScheduledEffect.AllDays,  8, 22, EffectsDatabase.RainbowMiniLites ),            
-            new ScheduledEffect(ScheduledEffect.AllDays,  8, 22, EffectsDatabase.QuietColorStars),
-
-            new ScheduledEffect(ScheduledEffect.AllDays,  8, 22, EffectsDatabase.QuietColorStars),
-        };
-
-        public override List<LightStrip> LightStrips { get { return _StripControllers; } }
-        public override ScheduledEffect[] LEDEffects 
-        { 
-            get 
+            LightStrips = new List<LightStrip>()
             {
-                return _LEDEffects; 
-            } 
+                new LightStrip("192.168.8.36", "CBWEST1", compressData, CABANA_1_LENGTH, 1, CABANA_1, false)  { FramesPerBuffer = 312, BatchSize = 10 },
+                new LightStrip("192.168.8.5", "CBEAST1", compressData, CABANA_2_LENGTH, 1, CABANA_2, true)    { FramesPerBuffer = 312, BatchSize = 10 },
+                new LightStrip("192.168.8.37", "CBEAST2", compressData, CABANA_3_LENGTH, 1, CABANA_3, false)  { FramesPerBuffer = 312, BatchSize = 10 },
+                new LightStrip("192.168.8.31", "CBEAST3", compressData, CABANA_4_LENGTH, 1, CABANA_4, false)  { FramesPerBuffer = 312, BatchSize = 10 },
+            };
+
+            LEDEffects = new List<ScheduledEffect>()
+            {
+                // Uncomment to test a single effect
+
+                new ScheduledEffect(ScheduledEffect.AllDays,  22, 23, new SimpleColorFillEffect(CRGB.RandomSaturatedColor.fadeToBlackBy(0.50f), 2)),
+                new ScheduledEffect(ScheduledEffect.AllDays,  23, 24, new SimpleColorFillEffect(CRGB.RandomSaturatedColor.fadeToBlackBy(0.60f), 2)),
+                new ScheduledEffect(ScheduledEffect.AllDays,  0,  1,  new SimpleColorFillEffect(CRGB.RandomSaturatedColor.fadeToBlackBy(0.70f), 4)),
+                new ScheduledEffect(ScheduledEffect.AllDays,  1,  2,  new SimpleColorFillEffect(CRGB.RandomSaturatedColor.fadeToBlackBy(0.80f), 4)),
+                new ScheduledEffect(ScheduledEffect.AllDays,  2,  3,  new SimpleColorFillEffect(CRGB.RandomSaturatedColor.fadeToBlackBy(0.90f), 4)),
+                new ScheduledEffect(ScheduledEffect.AllDays,  3,  4,  new SimpleColorFillEffect(CRGB.RandomSaturatedColor.fadeToBlackBy(0.80f), 4)),
+                new ScheduledEffect(ScheduledEffect.AllDays,  4,  5,  new SimpleColorFillEffect(CRGB.RandomSaturatedColor.fadeToBlackBy(0.70f), 3)),
+                new ScheduledEffect(ScheduledEffect.AllDays,  5,  6,  new SimpleColorFillEffect(CRGB.RandomSaturatedColor.fadeToBlackBy(0.60f), 2)),
+                new ScheduledEffect(ScheduledEffect.AllDays,  6,  7,  new SimpleColorFillEffect(CRGB.RandomSaturatedColor.fadeToBlackBy(0.50f), 2)),
+                new ScheduledEffect(ScheduledEffect.AllDays,  7,  8,  new SimpleColorFillEffect(CRGB.RandomSaturatedColor.fadeToBlackBy(0.40f), 2)),
+
+
+                new ScheduledEffect(ScheduledEffect.AllDays,  8, 22, EffectsDatabase.SubtleColorTwinkleStarEffect ),
+
+                new ScheduledEffect(ScheduledEffect.AllDays,  8, 22, EffectsDatabase.OneDirectionStars ),
+                new ScheduledEffect(ScheduledEffect.AllDays,  8, 22, EffectsDatabase.ColorFadeMiniLites ),
+                new ScheduledEffect(ScheduledEffect.AllDays,  8, 22, EffectsDatabase.ColorCycleTube ),
+                new ScheduledEffect(ScheduledEffect.AllDays,  8, 22, EffectsDatabase.RainbowMiniLites ),
+                new ScheduledEffect(ScheduledEffect.AllDays,  8, 22, EffectsDatabase.QuietColorStars),
+
+                new ScheduledEffect(ScheduledEffect.AllDays,  8, 22, EffectsDatabase.QuietColorStars),
+            };
         }
+
         public override CRGB[] LEDs { get { return _LEDs; } }
     };
 
@@ -1003,19 +1003,18 @@ namespace NightDriver
 
         private CRGB[] _LEDs = InitializePixels<CRGB>(BENCH_LENGTH);
 
-        private List<LightStrip> _StripControllers = new List<LightStrip>
+        public Bench() : base("Bench")
         {
-            new LightStrip("192.168.8.77", "BENCH", compressData, BENCH_LENGTH, 1, BENCH_START, true, 0, false) { FramesPerBuffer = 24, BatchSize = 1  }  // 216
-            //new LightStrip("192.168.8.163", "BENCH", compressData, BENCH_LENGTH, 1, BENCH_START, true, 0, false) {  }  // 216
-        }; 
+            LightStrips = new List<LightStrip>()
+            {
+                new LightStrip("192.168.8.77", "BENCH", compressData, BENCH_LENGTH, 1, BENCH_START, true, 0, false) { FramesPerBuffer = 24, BatchSize = 1  }  // 216
+            };
+            LEDEffects = new List<ScheduledEffect>()
+            {
+                new ScheduledEffect(ScheduledEffect.AllDays,  0, 24, EffectsDatabase.ClassicTwinkle),
+            };
+        }
 
-        public ScheduledEffect[] _LEDEffects = 
-        {
-            new ScheduledEffect(ScheduledEffect.AllDays,  0, 24, EffectsDatabase.ClassicTwinkle),
-        };
-
-        public override List<LightStrip> LightStrips        { get { return _StripControllers; } }
-        public override ScheduledEffect[] LEDEffects    { get { return _LEDEffects; } }
         public override CRGB[] LEDs                  { get { return _LEDs; } }
     };
 
@@ -1030,21 +1029,21 @@ namespace NightDriver
 
         private CRGB[] _LEDs = InitializePixels<CRGB>(LENGTH);
 
-        private List<LightStrip> _StripControllers = new List<LightStrip>
+        public CeilingStrip() : base("Ceiling Strip")
         {
-            new LightStrip("192.168.8.212", "Ceiling A", true, LENGTH, 1, START, true, 0, false) { FramesPerBuffer = 500, BatchSize = 20, CompressData = true },  // 216
-        }; 
+            LightStrips = new List<LightStrip>()
+            {
+                new LightStrip("192.168.8.212", "Ceiling A", true, LENGTH, 1, START, true, 0, false) { FramesPerBuffer = 500, BatchSize = 20, CompressData = true },  // 216
+            };
+            LEDEffects = new List<ScheduledEffect>()
+            {
+                new ScheduledEffect(ScheduledEffect.AllDays,  0, 24, new FireEffect(LENGTH, true) { _Cooling = 100, _speed = 2 }),
+                new ScheduledEffect(ScheduledEffect.AllDays,  0, 24, EffectsDatabase.MarqueeEffect ),
+                new ScheduledEffect(ScheduledEffect.AllDays,  0, 24, EffectsDatabase.SubtleColorTwinkleStarEffect ),
+                new ScheduledEffect(ScheduledEffect.AllDays,  0, 24, EffectsDatabase.ClassicTwinkle ),
+            };
+       }
 
-        public ScheduledEffect[] _LEDEffects = 
-        {
-            new ScheduledEffect(ScheduledEffect.AllDays,  0, 24, new FireEffect(LENGTH, true) { _Cooling = 100, _speed = 2 }),
-            new ScheduledEffect(ScheduledEffect.AllDays,  0, 24, EffectsDatabase.MarqueeEffect ),
-            new ScheduledEffect(ScheduledEffect.AllDays,  0, 24, EffectsDatabase.SubtleColorTwinkleStarEffect ),
-            new ScheduledEffect(ScheduledEffect.AllDays,  0, 24, EffectsDatabase.ClassicTwinkle ),
-       };
-
-        public override List<LightStrip> LightStrips    { get { return _StripControllers; } }
-        public override ScheduledEffect[] LEDEffects    { get { return _LEDEffects; } }
         public override CRGB[] LEDs                     { get { return _LEDs; } }
     };
 
@@ -1056,59 +1055,60 @@ namespace NightDriver
         const int TREE_LENGTH = 1*144;
 
         private CRGB[] _LEDs = InitializePixels<CRGB>(TREE_LENGTH);
-        private List<LightStrip> _StripControllers = new List<LightStrip>
+
+        public Tree() : base("Tree")
         {
-            new LightStrip("192.168.8.77", "Bonsai Tree", compressData, TREE_LENGTH, 1, TREE_START, false, 0, false) { FramesPerBuffer = 312, BatchSize = 10  },
-        };
-
-        public ScheduledEffect[] _LEDEffects =
-        {
-            new ScheduledEffect(ScheduledEffect.AllDays,  6, 24,
-                    new PaletteEffect( new Palette(new CRGB [] { CRGB.Red, CRGB.Green, CRGB.Blue }))
-                        { _LEDColorPerSecond = 20,
-                        _LEDScrollSpeed = 3,
-                        _EveryNthDot = 4,
-                        _DotSize = 1,
-                        _Mirrored = false,
-                        _Brightness = 1.0,
-                        _Density = 8}),
-                
-            new ScheduledEffect(ScheduledEffect.AllDays,  6, 24,
-                    new PaletteEffect( new Palette(new CRGB [] { CRGB.Red, CRGB.Green, CRGB.Blue }))
-                        { _LEDColorPerSecond = 20,
-                        _LEDScrollSpeed = 0,
-                        _EveryNthDot = TREE_LENGTH,
-                        _DotSize = TREE_LENGTH,
-                        _Mirrored = false,
-                        _Brightness = 1.0,
-                        _Density = 0}),
-
-
-            new ScheduledEffect(ScheduledEffect.AllDays,  6, 24, new SimpleColorFillEffect(CRGB.Green, 1)),
-
-            new ScheduledEffect(ScheduledEffect.AllDays,  6, 24,
-                    new PaletteEffect( new Palette(new CRGB [] { CRGB.Green }))
-                        { _LEDColorPerSecond = 20,
-                        _LEDScrollSpeed = 3,
-                        _EveryNthDot = 4,
-                        _DotSize = 1,
-                        _Mirrored = false,
-                        _Brightness = 1.0,
-                        _Density = 0}),
+            LightStrips = new List<LightStrip>()
+            { 
+                new LightStrip("192.168.8.77", "Bonsai Tree", compressData, TREE_LENGTH, 1, TREE_START, false, 0, false) { FramesPerBuffer = 312, BatchSize = 10  },
+            };
+            LEDEffects = new List<ScheduledEffect>()
+            {
+                new ScheduledEffect(ScheduledEffect.AllDays,  6, 24,
+                        new PaletteEffect( new Palette(new CRGB [] { CRGB.Red, CRGB.Green, CRGB.Blue }))
+                            { _LEDColorPerSecond = 20,
+                            _LEDScrollSpeed = 3,
+                            _EveryNthDot = 4,
+                            _DotSize = 1,
+                            _Mirrored = false,
+                            _Brightness = 1.0,
+                            _Density = 8}),
 
                 new ScheduledEffect(ScheduledEffect.AllDays,  6, 24,
-                    new PaletteEffect( new Palette(new CRGB [] { CRGB.Red, CRGB.Green, CRGB.Blue }))
-                        { _LEDColorPerSecond = 20,
-                        _LEDScrollSpeed = 3,
-                        _EveryNthDot = 4,
-                        _DotSize = 1,
-                        _Mirrored = false,
-                        _Brightness = 1.0,
-                        _Density = 8}),
-        };
+                        new PaletteEffect( new Palette(new CRGB [] { CRGB.Red, CRGB.Green, CRGB.Blue }))
+                            { _LEDColorPerSecond = 20,
+                            _LEDScrollSpeed = 0,
+                            _EveryNthDot = TREE_LENGTH,
+                            _DotSize = TREE_LENGTH,
+                            _Mirrored = false,
+                            _Brightness = 1.0,
+                            _Density = 0}),
 
-        public override List<LightStrip> LightStrips { get { return _StripControllers; } }
-        public override ScheduledEffect[] LEDEffects { get { return _LEDEffects; } }
+
+                new ScheduledEffect(ScheduledEffect.AllDays,  6, 24, new SimpleColorFillEffect(CRGB.Green, 1)),
+
+                new ScheduledEffect(ScheduledEffect.AllDays,  6, 24,
+                        new PaletteEffect( new Palette(new CRGB [] { CRGB.Green }))
+                            { _LEDColorPerSecond = 20,
+                            _LEDScrollSpeed = 3,
+                            _EveryNthDot = 4,
+                            _DotSize = 1,
+                            _Mirrored = false,
+                            _Brightness = 1.0,
+                            _Density = 0}),
+
+                    new ScheduledEffect(ScheduledEffect.AllDays,  6, 24,
+                        new PaletteEffect( new Palette(new CRGB [] { CRGB.Red, CRGB.Green, CRGB.Blue }))
+                            { _LEDColorPerSecond = 20,
+                            _LEDScrollSpeed = 3,
+                            _EveryNthDot = 4,
+                            _DotSize = 1,
+                            _Mirrored = false,
+                            _Brightness = 1.0,
+                            _Density = 8}),
+            };
+        }
+
         public override CRGB[] LEDs { get { return _LEDs; } }
     };
 
@@ -1120,17 +1120,17 @@ namespace NightDriver
 
         private CRGB[] _LEDs = InitializePixels<CRGB>(TV_LENGTH);
 
-        private List<LightStrip> _StripControllers = new List<LightStrip>
+        public TV() : base("TV")
         {
-            new LightStrip("192.168.8.26", "TV",        compressData, TV_LENGTH,         1, TV_START, false) { FramesPerBuffer = 500, BatchSize = 10  }
-        };
-
-        public ScheduledEffect[] _LEDEffects =
-        {
-            new ScheduledEffect(ScheduledEffect.AllDays, 0, 24, new FireEffect(4 * 144, true) { _Cooling = 60 } )
-        };
-        public override List<LightStrip> LightStrips { get { return _StripControllers; } }
-        public override ScheduledEffect[] LEDEffects { get { return _LEDEffects; } }
+            LightStrips = new List<LightStrip>()
+            {
+                new LightStrip("192.168.8.26", "TV",        compressData, TV_LENGTH,         1, TV_START, false) { FramesPerBuffer = 500, BatchSize = 10  }
+            };
+            LEDEffects = new List<ScheduledEffect>()
+            {
+                new ScheduledEffect(ScheduledEffect.AllDays, 0, 24, new FireEffect(4 * 144, true) { _Cooling = 60 } )
+            };
+        }
         public override CRGB[] LEDs { get { return _LEDs; } }
     }
 
@@ -1139,7 +1139,7 @@ namespace NightDriver
     // Location definition for the up-lights on top of the shop cupboards
 
     public class ShopCupboards : Site
-    {
+    { 
         const bool compressData = true;
 
         const int CUPBOARD_START = 0;
@@ -1155,27 +1155,28 @@ namespace NightDriver
 
         private CRGB[] _LEDs = InitializePixels<CRGB>(CUPBOARD_LENGTH);
 
-        private List<LightStrip> _StripControllers = new List<LightStrip>
+        public ShopCupboards() : base("Shop Cupboards")
         {
-            new LightStrip("192.168.8.12", "CUPBOARD1", compressData, CUPBOARD_1_LENGTH, 1, CUPBOARD_1_START, false) { FramesPerBuffer = 500, BatchSize = 10 },
-            new LightStrip("192.168.8.29", "CUPBOARD2", compressData, CUPBOARD_2_LENGTH, 1, CUPBOARD_2_START, false) { FramesPerBuffer = 500, BatchSize = 10 },
-            new LightStrip("192.168.8.30", "CUPBOARD3", compressData, CUPBOARD_3_LENGTH, 1, CUPBOARD_3_START, false) { FramesPerBuffer = 500, BatchSize = 10 },  // WHOOPS
-            new LightStrip("192.168.8.15", "CUPBOARD4", compressData, CUPBOARD_4_LENGTH, 1, CUPBOARD_4_START, false) { FramesPerBuffer = 500, BatchSize = 10 },
-        };
+            LightStrips = new List<LightStrip>()
+            {
+                new LightStrip("192.168.8.12", "CUPBOARD1", compressData, CUPBOARD_1_LENGTH, 1, CUPBOARD_1_START, false) { FramesPerBuffer = 500, BatchSize = 10 },
+                new LightStrip("192.168.8.29", "CUPBOARD2", compressData, CUPBOARD_2_LENGTH, 1, CUPBOARD_2_START, false) { FramesPerBuffer = 500, BatchSize = 10 },
+                new LightStrip("192.168.8.30", "CUPBOARD3", compressData, CUPBOARD_3_LENGTH, 1, CUPBOARD_3_START, false) { FramesPerBuffer = 500, BatchSize = 10 },  // WHOOPS
+                new LightStrip("192.168.8.15", "CUPBOARD4", compressData, CUPBOARD_4_LENGTH, 1, CUPBOARD_4_START, false) { FramesPerBuffer = 500, BatchSize = 10 },
+            };
 
-        public ScheduledEffect[] _LEDEffects =
-        {
-            new ScheduledEffect(ScheduledEffect.AllDays, 0, 24, new PaletteEffect(Palette.SmoothRainbow) 
-            { 
-                _EveryNthDot = 1, 
-                _DotSize = 1, 
-                _Density = 0.025/32 * PIXELS_PER_METER144, 
-                _LEDColorPerSecond = 3 
-            }),
-        };
+            LEDEffects = new List<ScheduledEffect>()
+            {
+                new ScheduledEffect(ScheduledEffect.AllDays, 0, 24, new PaletteEffect(Palette.SmoothRainbow)
+                {
+                    _EveryNthDot = 1,
+                    _DotSize = 1,
+                    _Density = 0.025/32 * PIXELS_PER_METER144,
+                    _LEDColorPerSecond = 3
+                })
+            };
+        }
 
-        public override List<LightStrip> LightStrips { get { return _StripControllers; } }
-        public override ScheduledEffect[] LEDEffects { get { return _LEDEffects; } }
         public override CRGB[] LEDs { get { return _LEDs; } }
     };
 
@@ -1195,20 +1196,19 @@ namespace NightDriver
         const int WINDOW_LENGTH = WINDOW_1_LENGTH;
 
         private CRGB[] _LEDs = InitializePixels<CRGB>(WINDOW_LENGTH);
-        
-        private List<LightStrip> _StripControllers = new List<LightStrip>
+
+        public ShopSouthWindows1() : base("Shop South Windows 1")
         {
-            new LightStrip("192.168.8.8", "WINDOW1", compressData, WINDOW_1_LENGTH, 1, WINDOW_1_START, false) { FramesPerBuffer = 21, BatchSize = 1 } ,
-        };
+            LightStrips = new List<LightStrip>()
+            {
+                new LightStrip("192.168.8.8", "WINDOW1", compressData, WINDOW_1_LENGTH, 1, WINDOW_1_START, false) { FramesPerBuffer = 21, BatchSize = 1 } ,
+            };
+            LEDEffects = new List<ScheduledEffect>()
+            {
+                new ScheduledEffect(ScheduledEffect.AllDays, 0, 24, new SimpleColorFillEffect(new CRGB(255, 112, 0), 1)),
+            };
+        }
 
-        public ScheduledEffect[] _LEDEffects = 
-        {
-            new ScheduledEffect(ScheduledEffect.AllDays, 0, 24, new SimpleColorFillEffect(new CRGB(255, 112, 0), 1)),             
-        };
-
-
-        public override List<LightStrip> LightStrips { get { return _StripControllers; } }
-        public override ScheduledEffect[] LEDEffects { get { return _LEDEffects; } }
         public override CRGB[] LEDs { get { return _LEDs; } }
     }
 
@@ -1224,19 +1224,17 @@ namespace NightDriver
 
         private CRGB[] _LEDs = InitializePixels<CRGB>(WINDOW_LENGTH);
 
-        private List<LightStrip> _StripControllers = new List<LightStrip>
+        public ShopSouthWindows2() : base("Shop South Windows 2")
         {
-            new LightStrip("192.168.8.9", "WINDOW2", compressData, WINDOW_1_LENGTH, 1, WINDOW_1_START, false) { BatchSize = 1 },
-        };
-
-        public ScheduledEffect[] _LEDEffects =
-        {
-            new ScheduledEffect(ScheduledEffect.AllDays, 0, 24, new SimpleColorFillEffect(CRGB.Blue, 1)),            
-        };
-
-
-        public override List<LightStrip>  LightStrips { get { return _StripControllers; } }
-        public override ScheduledEffect[] LEDEffects { get { return _LEDEffects; } }
+            LightStrips = new List<LightStrip>()
+            {
+                new LightStrip("192.168.8.9", "WINDOW2", compressData, WINDOW_1_LENGTH, 1, WINDOW_1_START, false) { FramesPerBuffer = 21, BatchSize = 1 } ,
+            };
+            LEDEffects = new List<ScheduledEffect>()
+            {
+                new ScheduledEffect(ScheduledEffect.AllDays, 0, 24, new SimpleColorFillEffect(CRGB.Blue, 1)),
+            };
+        }
         public override CRGB[] LEDs { get { return _LEDs; } }
     }
 
@@ -1252,19 +1250,17 @@ namespace NightDriver
 
         private CRGB[] _LEDs = InitializePixels<CRGB>(WINDOW_LENGTH);
 
-        private List<LightStrip> _StripControllers = new List<LightStrip>
+        public ShopSouthWindows3() : base("Shop South Windows 3")
         {
-            new LightStrip("192.168.8.10", "WINDOW3", compressData, WINDOW_1_LENGTH, 1, WINDOW_1_START, false) { BatchSize = 1 },
-        };
-
-        public ScheduledEffect[] _LEDEffects =
-        {
-            new ScheduledEffect(ScheduledEffect.AllDays, 0, 24, new SimpleColorFillEffect(CRGB.Green, 1)),            
-        };
-
-
-        public override List<LightStrip> LightStrips { get { return _StripControllers; } }
-        public override ScheduledEffect[] LEDEffects { get { return _LEDEffects; } }
+            LightStrips = new List<LightStrip>()
+            {
+                new LightStrip("192.168.8.10", "WINDOW3", compressData, WINDOW_1_LENGTH, 1, WINDOW_1_START, false) { FramesPerBuffer = 21, BatchSize = 1 } ,
+            };
+            LEDEffects = new List<ScheduledEffect>()
+            {
+                new ScheduledEffect(ScheduledEffect.AllDays, 0, 24, new SimpleColorFillEffect(CRGB.Green, 1)),
+            };
+        }
         public override CRGB[] LEDs { get { return _LEDs; } }
     }
 }
