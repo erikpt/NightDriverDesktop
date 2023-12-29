@@ -12,9 +12,7 @@
 //
 //---------------------------------------------------------------------------
 
-using System.Security.Policy;
-using System.Text.Json;
-using static NightDriver.LEDServer;
+using Newtonsoft.Json;
 
 namespace NightDriver
 {
@@ -61,11 +59,12 @@ namespace NightDriver
         {
             try
             {
-                var options = new JsonSerializerOptions
+                var settings = new JsonSerializerSettings
                 {
-                    WriteIndented = true // For better readability of the output
+                    TypeNameHandling = TypeNameHandling.Auto,
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
                 };
-                string jsonString = JsonSerializer.Serialize(AllSites, options);
+                string jsonString = JsonConvert.SerializeObject(AllSites, settings);
                 File.WriteAllText("AllStrips.json", jsonString); // Write to a file
                 return true;
             }
@@ -81,7 +80,15 @@ namespace NightDriver
             try
             {
                 string jsonString = File.ReadAllText("AllStrips.json");
-                AllSites = JsonSerializer.Deserialize<Dictionary<string, Site>>(jsonString);
+
+                var settings = new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto,
+                    PreserveReferencesHandling = PreserveReferencesHandling.Objects,
+                    ObjectCreationHandling = ObjectCreationHandling.Replace
+                };
+
+                AllSites = JsonConvert.DeserializeObject<Dictionary<string, Site>>(jsonString, settings);
             }
             catch (Exception ex)
             {
@@ -90,7 +97,7 @@ namespace NightDriver
             }
 
             // Go through each of the Site objects and see if we have a matching Site already
-            // in the AllSites dictionary.  If not, add it, and if so, add the strips to the
+            // in the AllSites dictionary. If not, add it, and if so, add the strips to the
             // existing site.
 
             foreach (var site in AllSites.Values)
@@ -124,14 +131,14 @@ namespace NightDriver
 
         private void StartCommunications()
         {
-            foreach (var location in SampleLocations)
+            foreach (var location in AllSites.Values)
                 foreach (var strip in location.LightStrips)
                     strip.Start();
         }
 
         private void StopCommunications()
         {
-            foreach (var location in SampleLocations)
+            foreach (var location in AllSites.Values)
                 foreach (var strip in location.LightStrips)
                     strip.Stop();
         }
@@ -140,7 +147,7 @@ namespace NightDriver
         internal void Start(CancellationToken token)
         {
             IsRunning = true;
-            foreach (var location in SampleLocations)
+            foreach (var location in AllSites.Values)
                 location.StartWorkerThread(token);
             StartCommunications();
         }
@@ -155,7 +162,7 @@ namespace NightDriver
         public void RemoveStrip(LightStrip strip)
         {
             strip.Stop();
-            var siteContainingStrip = SampleLocations.FirstOrDefault(site => site.LightStrips.Contains(strip));
+            var siteContainingStrip = AllSites.Values.FirstOrDefault(site => site.LightStrips.Contains(strip));
             siteContainingStrip.LightStrips.Remove(strip);
             AllStrips.Remove(strip);
         }

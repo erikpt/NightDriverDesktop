@@ -15,7 +15,8 @@
 
 using System.Diagnostics;
 using System.Security.Policy;
-using System.Text.Json.Serialization;
+using Newtonsoft.Json;
+
 
 namespace NightDriver
 {
@@ -97,13 +98,16 @@ namespace NightDriver
         public List<ScheduledEffect> LEDEffects { get; set; } = new List<ScheduledEffect>();
 
         [JsonIgnore]
-        public virtual CRGB[] LEDs { get; }
+        public CRGB[] LEDs { get; private set; }
 
         public const int PIXELS_PER_METER144 = 144;
 
-        public Site(String name)
+        public Site(String name, uint width, uint height)
         {
-            Name = name;
+            Width     = width;
+            Height    = height;
+            LEDs      = InitializePixels<CRGB>((int)LEDCount);
+            Name      = name;
             StartTime = DateTime.Now;
         }
 
@@ -220,6 +224,9 @@ namespace NightDriver
             var effectCount = enabledEffects.Count();
             if (effectCount > 0)
             {
+                // Currently all effects expire and change over at the same time, since they all share the same interval.  Each effect can be
+                // offset within its effect list by N steps positive or negative, and that's how the Effect+ and Effect- buttons work.
+
                 int iEffect = (int)((DateTime.Now - StartTime).TotalSeconds / SecondsPerEffect) + _iEffectOffset;
                 iEffect %= effectCount;
                 var effect = enabledEffects.ElementAt(iEffect);
@@ -229,9 +236,14 @@ namespace NightDriver
 
                 lock (LEDs)
                     effect.Effect.DrawFrame(this);
+
                 CurrentEffectName = effect.Effect.GetType().Name;
                 if ((DateTime.UtcNow - timeStart2).TotalSeconds > 0.25)
                     ConsoleApp.Stats.WriteLine("MAIN3 DELAY");
+            }
+            else
+            {
+                CurrentEffectName = "[None Running]";
             }
 
             if ((DateTime.UtcNow - timeStart2).TotalSeconds > 0.25)
@@ -242,21 +254,6 @@ namespace NightDriver
                     controller.CompressAndEnqueueData(LEDs, timestamp);
                 else
                     controller.Response.Reset();
-        }
-
-        public override uint Width
-        {
-            get { return (uint)LEDs.Length; }
-        }
-
-        public override uint Height
-        {
-            get { return 1; }
-        }
-
-        public override uint LEDCount
-        {
-            get { return Width * Height; }
         }
 
         protected uint GetPixelIndex(uint x, uint y)
@@ -940,15 +937,13 @@ namespace NightDriver
         const int CABANA_4 = CABANA_START + CABANA_3_LENGTH + CABANA_2_LENGTH + CABANA_1_LENGTH;
         const int CABANA_4_LENGTH = 8 * 144 - 23;
         const int CABANA_LENGTH = CABANA_1_LENGTH + CABANA_2_LENGTH + CABANA_3_LENGTH + CABANA_4_LENGTH;
-
-        private CRGB[] _LEDs = InitializePixels<CRGB>(CABANA_LENGTH);
         
         public ScheduledEffect[] _GameDayLEDEffects =
         {
             new ScheduledEffect(ScheduledEffect.AllDays,  9, 22,  EffectsDatabase.Football_Effect_Seattle),
         };
 
-        public Cabana() : base("Cabana")
+        public Cabana() : base("Cabana", CABANA_LENGTH, 1)
         {
             LightStrips = new List<LightStrip>()
             {
@@ -985,8 +980,6 @@ namespace NightDriver
                 new ScheduledEffect(ScheduledEffect.AllDays,  8, 22, EffectsDatabase.QuietColorStars),
             };
         }
-
-        public override CRGB[] LEDs { get { return _LEDs; } }
     };
 
 
@@ -1001,9 +994,7 @@ namespace NightDriver
         const int BENCH_START   = 0;
         const int BENCH_LENGTH = 8 * 144;
 
-        private CRGB[] _LEDs = InitializePixels<CRGB>(BENCH_LENGTH);
-
-        public Bench() : base("Bench")
+        public Bench() : base("Bench", BENCH_LENGTH, 1)
         {
             LightStrips = new List<LightStrip>()
             {
@@ -1014,8 +1005,6 @@ namespace NightDriver
                 new ScheduledEffect(ScheduledEffect.AllDays,  0, 24, EffectsDatabase.ClassicTwinkle),
             };
         }
-
-        public override CRGB[] LEDs                  { get { return _LEDs; } }
     };
 
     // ChristmasPresents - Front Door Pillar Left
@@ -1027,9 +1016,7 @@ namespace NightDriver
         const int START   = 0;
         const int LENGTH = 5*144 + 38;
 
-        private CRGB[] _LEDs = InitializePixels<CRGB>(LENGTH);
-
-        public CeilingStrip() : base("Ceiling Strip")
+        public CeilingStrip() : base("Ceiling Strip", LENGTH, 1)
         {
             LightStrips = new List<LightStrip>()
             {
@@ -1043,8 +1030,6 @@ namespace NightDriver
                 new ScheduledEffect(ScheduledEffect.AllDays,  0, 24, EffectsDatabase.ClassicTwinkle ),
             };
        }
-
-        public override CRGB[] LEDs                     { get { return _LEDs; } }
     };
 
 
@@ -1054,9 +1039,7 @@ namespace NightDriver
         const int TREE_START = 0;
         const int TREE_LENGTH = 1*144;
 
-        private CRGB[] _LEDs = InitializePixels<CRGB>(TREE_LENGTH);
-
-        public Tree() : base("Tree")
+        public Tree() : base("Tree", TREE_LENGTH, 1)
         {
             LightStrips = new List<LightStrip>()
             { 
@@ -1108,8 +1091,6 @@ namespace NightDriver
                             _Density = 8}),
             };
         }
-
-        public override CRGB[] LEDs { get { return _LEDs; } }
     };
 
     public class TV : Site
@@ -1118,9 +1099,7 @@ namespace NightDriver
         const int TV_START = 0;
         const int TV_LENGTH = 144 * 5;
 
-        private CRGB[] _LEDs = InitializePixels<CRGB>(TV_LENGTH);
-
-        public TV() : base("TV")
+        public TV() : base("TV", TV_LENGTH, 1)
         {
             LightStrips = new List<LightStrip>()
             {
@@ -1131,7 +1110,6 @@ namespace NightDriver
                 new ScheduledEffect(ScheduledEffect.AllDays, 0, 24, new FireEffect(4 * 144, true) { _Cooling = 60 } )
             };
         }
-        public override CRGB[] LEDs { get { return _LEDs; } }
     }
 
     // ShopCupboards
@@ -1153,9 +1131,7 @@ namespace NightDriver
         const int CUPBOARD_4_LENGTH = 144;          // Actuall 82, but 
         const int CUPBOARD_LENGTH = CUPBOARD_1_LENGTH + CUPBOARD_2_LENGTH + CUPBOARD_3_LENGTH + CUPBOARD_4_LENGTH;
 
-        private CRGB[] _LEDs = InitializePixels<CRGB>(CUPBOARD_LENGTH);
-
-        public ShopCupboards() : base("Shop Cupboards")
+        public ShopCupboards() : base("Shop Cupboards", CUPBOARD_LENGTH, 1)
         {
             LightStrips = new List<LightStrip>()
             {
@@ -1176,8 +1152,6 @@ namespace NightDriver
                 })
             };
         }
-
-        public override CRGB[] LEDs { get { return _LEDs; } }
     };
 
     // ShopSouthWindows
@@ -1195,21 +1169,18 @@ namespace NightDriver
 
         const int WINDOW_LENGTH = WINDOW_1_LENGTH;
 
-        private CRGB[] _LEDs = InitializePixels<CRGB>(WINDOW_LENGTH);
-
-        public ShopSouthWindows1() : base("Shop South Windows 1")
+        public ShopSouthWindows1() : base("Shop South Windows 1", WINDOW_LENGTH, 1)
         {
             LightStrips = new List<LightStrip>()
             {
                 new LightStrip("192.168.8.8", "WINDOW1", compressData, WINDOW_1_LENGTH, 1, WINDOW_1_START, false) { FramesPerBuffer = 21, BatchSize = 1 } ,
             };
+
             LEDEffects = new List<ScheduledEffect>()
             {
                 new ScheduledEffect(ScheduledEffect.AllDays, 0, 24, new SimpleColorFillEffect(new CRGB(255, 112, 0), 1)),
             };
         }
-
-        public override CRGB[] LEDs { get { return _LEDs; } }
     }
 
     public class ShopSouthWindows2 : Site
@@ -1222,9 +1193,7 @@ namespace NightDriver
 
         const int WINDOW_LENGTH = WINDOW_1_LENGTH;
 
-        private CRGB[] _LEDs = InitializePixels<CRGB>(WINDOW_LENGTH);
-
-        public ShopSouthWindows2() : base("Shop South Windows 2")
+        public ShopSouthWindows2() : base("Shop South Windows 2", WINDOW_LENGTH, 1)
         {
             LightStrips = new List<LightStrip>()
             {
@@ -1235,7 +1204,6 @@ namespace NightDriver
                 new ScheduledEffect(ScheduledEffect.AllDays, 0, 24, new SimpleColorFillEffect(CRGB.Blue, 1)),
             };
         }
-        public override CRGB[] LEDs { get { return _LEDs; } }
     }
 
     public class ShopSouthWindows3 : Site
@@ -1248,9 +1216,7 @@ namespace NightDriver
 
         const int WINDOW_LENGTH = WINDOW_1_LENGTH;
 
-        private CRGB[] _LEDs = InitializePixels<CRGB>(WINDOW_LENGTH);
-
-        public ShopSouthWindows3() : base("Shop South Windows 3")
+        public ShopSouthWindows3() : base("Shop South Windows 3", WINDOW_LENGTH, 1)
         {
             LightStrips = new List<LightStrip>()
             {
@@ -1261,6 +1227,5 @@ namespace NightDriver
                 new ScheduledEffect(ScheduledEffect.AllDays, 0, 24, new SimpleColorFillEffect(CRGB.Green, 1)),
             };
         }
-        public override CRGB[] LEDs { get { return _LEDs; } }
     }
 }

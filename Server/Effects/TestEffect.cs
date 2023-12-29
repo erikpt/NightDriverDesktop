@@ -9,8 +9,8 @@ namespace NightDriver
     {
         // Update is called once per frame
 
-        protected CRGB _color;
-        protected uint  _everyNth;
+        public CRGB _color;
+        public uint  _everyNth;
 
         public SimpleColorFillEffect(CRGB color, uint everyNth = 10)
         {
@@ -30,9 +30,9 @@ namespace NightDriver
     public class RainbowEffect : LEDEffect
     {
         // Update is called once per frame
-        protected double _deltaHue;
-        protected double _startHue;
-        protected double _hueSpeed;
+        public double _deltaHue;
+        public double _startHue;
+        public double _hueSpeed;
 
         DateTime _lastDraw = DateTime.UtcNow;
 

@@ -36,6 +36,7 @@
 //
 // -----------------------------------------------------------------------------
 
+using Newtonsoft.Json;
 using System;
 using System.Drawing;
 using System.Linq;
@@ -172,6 +173,7 @@ namespace NightDriver
             return this;
         }
 
+        [JsonIgnore]
         public double h
         {
             get
@@ -1074,20 +1076,21 @@ namespace NightDriver
         public abstract void DrawPixel(uint x, CRGB color);
         public abstract void BlendPixel(uint x, CRGB color);
 
-
-        public abstract uint Width
+        public uint Width
         {
             get;
+            set;
         }
 
-        public abstract uint Height
+        public uint Height
         {
             get;
+            set;
         }
 
-        public abstract uint LEDCount
+        public uint LEDCount
         {
-            get;
+            get { return Width * Height; }
         }
     }
 }

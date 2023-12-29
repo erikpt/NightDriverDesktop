@@ -12,8 +12,8 @@
 //
 //---------------------------------------------------------------------------
 using NightDriver;
+using System.Diagnostics;
 
-[Serializable]
 public class LEDEffect 
 {
     public virtual string EffectName
@@ -26,8 +26,7 @@ public class LEDEffect
 
     protected virtual void Render(ILEDGraphics graphics)
     {
-        // BUGBUG class and this methoi would be abstract except for serialization requiremets // BUGBUG What?  What serialization?
-        throw new ApplicationException("Render Base Class called - This is abstract");
+        Debug.Assert(false, "Render called in base class");
     }
     
     public void DrawFrame(ILEDGraphics graphics)

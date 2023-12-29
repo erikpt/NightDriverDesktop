@@ -16,19 +16,13 @@
 //
 //---------------------------------------------------------------------------
 
-using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
-using System.Linq;
-using System.Threading;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using System.IO;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Diagnostics;
-using System.Text.Json.Serialization;
+using Newtonsoft.Json;
+
 // LEDControllerChannel
 //
 // Exposes ILEDGraphics via the GraphicsBase baseclass

@@ -14,12 +14,16 @@
 //---------------------------------------------------------------------------
 
 using NightDriver;
+using Newtonsoft.Json;
+using System.Drawing;
 
+[Serializable]
 public class Palette
 {
-    protected readonly CRGB[] colorEntries;
+    public CRGB[] colorEntries { get; set;  }
     public bool Blend { get; set; } = true;
 
+    [JsonIgnore]
     public int OriginalSize
     {
         get
@@ -94,19 +98,19 @@ public class Palette
 
 public class GaussianPalette : Palette
 {
-    protected double _Smoothing = 0.0;
     public double [] _Factors = new double[] { 0.06136, 0.24477, 0.38774, 0.24477, 0.06136 };
 
     public GaussianPalette(CRGB[] colors) : base(colors)
     {
-        _Smoothing = 1.0 / colors.Length;
     }
 
     public override CRGB this[double d]
     {
         get
         {
-            double s = _Smoothing / OriginalSize;
+            double smoothing = 1.0 / colorEntries.Length;
+
+            double s = smoothing / OriginalSize;
 
             double red   = base[d - s * 2].r * _Factors[0] +
                            base[d - s    ].r * _Factors[1] +
