@@ -75,6 +75,26 @@ namespace NightDriver
             }
         }
 
+        internal bool SaveStripsAs(string filePath)
+        {
+            try
+            {
+                var settings = new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto,
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                };
+                string jsonString = JsonConvert.SerializeObject(AllSites, settings);
+                File.WriteAllText(filePath, jsonString); // Write to a file
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during serialization: {ex.Message}");
+                return false;
+            }
+        }
+
         public bool LoadStrips()
         {
             try
@@ -112,6 +132,44 @@ namespace NightDriver
             return true;
         }
 
+        public bool LoadStripsFromFile(string filePath)
+        {
+            try
+            {
+                string jsonString = File.ReadAllText(filePath);
+
+                var settings = new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto,
+                    PreserveReferencesHandling = PreserveReferencesHandling.Objects,
+                    ObjectCreationHandling = ObjectCreationHandling.Replace
+                };
+
+                AllSites = JsonConvert.DeserializeObject<Dictionary<string, Site>>(jsonString, settings);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during deserialization: {ex.Message}");
+                return false;
+            }
+
+            // Go through each of the Site objects and see if we have a matching Site already
+            // in the AllSites dictionary. If not, add it, and if so, add the strips to the
+            // existing site.
+
+            foreach (var site in AllSites.Values)
+            {
+                foreach (var strip in site.LightStrips)
+                {
+                    strip.StripSite = site;
+                    AllStrips.Add(strip);
+                }
+            }
+
+            return true;
+        }
+
+
         internal void LoadStripsFromTable()
         {
             AllSites.Clear();
@@ -127,6 +185,12 @@ namespace NightDriver
                     AllStrips.Add(strip);
                 }
             }
+        }
+
+        internal void FreshStart()
+        {
+            AllSites.Clear();
+            AllStrips.Clear();
         }
 
         private void StartCommunications()
@@ -163,7 +227,10 @@ namespace NightDriver
         {
             strip.Stop();
             var siteContainingStrip = AllSites.Values.FirstOrDefault(site => site.LightStrips.Contains(strip));
-            siteContainingStrip.LightStrips.Remove(strip);
+            if (siteContainingStrip != null)
+            {
+                siteContainingStrip.LightStrips.Remove(strip);
+            }
             AllStrips.Remove(strip);
         }
 

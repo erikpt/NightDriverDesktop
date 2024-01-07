@@ -14,7 +14,9 @@
 //---------------------------------------------------------------------------
 
 
+using NightDriverDesktop;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace NightDriver
@@ -60,6 +62,10 @@ namespace NightDriver
         private Task backgroundTask;
         private CancellationTokenSource cancellationTokenSource;
 
+        private SaveFileDialog saveDialog = new SaveFileDialog();
+        private OpenFileDialog openDialog = new OpenFileDialog();
+        private string activeFileName = string.Empty;
+
         private void StartButton_Click(object sender, EventArgs e)
         {
             NightDriver.ConsoleApp.Stats.WriteLine("Start Server");
@@ -97,6 +103,30 @@ namespace NightDriver
             FillListView();
             timerListView.Start();
             timerVisualizer.Start();
+
+            //Setup the SaveFileDialog
+            saveDialog.InitialDirectory = Application.StartupPath;
+            saveDialog.RestoreDirectory = true;
+            saveDialog.FileName = string.Empty;
+            saveDialog.Filter = "JSON LED Strip Data File (*.json)|*.json";
+            saveDialog.CheckWriteAccess = true;
+            saveDialog.CheckFileExists = false;
+            saveDialog.CheckPathExists = true;
+            saveDialog.AutoUpgradeEnabled = true;
+            saveDialog.DefaultExt = ".json";
+            saveDialog.Title = Application.ProductName + " - Save LED Strip List";
+
+            //Setup the OpenFileDialog
+            openDialog.InitialDirectory = Application.StartupPath;
+            openDialog.RestoreDirectory = true;
+            openDialog.FileName = "AllStrips.json";
+            openDialog.Filter = "JSON LED Strip Data File (*.json)|*.json";
+            openDialog.CheckFileExists = true;
+            openDialog.CheckPathExists = true;
+            openDialog.AutoUpgradeEnabled = true;
+            openDialog.DefaultExt = ".json";
+            openDialog.Title = Application.ProductName + " - Open LED Strip List";
+
         }
 
         private void tabControl_DrawItem(object? sender, DrawItemEventArgs e)
@@ -191,6 +221,34 @@ namespace NightDriver
             buttonNewStrip.Enabled = !_server.IsRunning;
         }
 
+        private void AddNewStrip()
+        {
+            LightStripEditor newStrip = new();
+            newStrip.DialogMode = LightStripEditor.DialogOperatingMode.New;
+
+            DialogResult result = newStrip.ShowDialog();
+
+            if (!(result == DialogResult.OK))
+            {
+                return;
+            }
+            else if (newStrip.Tag is LightStrip)
+            {
+                if (newStrip.Tag == null)
+                {
+                    MessageBox.Show(
+                        "Error while adding new LED strip.",
+                        "Invalid LED Strip Data",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error
+                        );
+                }
+                LightStrip strip = (LightStrip)newStrip.Tag;
+                _server.AllStrips.Add(strip);
+                FillListView();
+            }
+        }
+
         private void buttonPreviousEffect_Click(object sender, EventArgs e)
         {
             var strip = stripList.SelectedItems[0].Tag as LightStrip;
@@ -206,26 +264,141 @@ namespace NightDriver
 
         private void buttonDeleteStrip_Click(object sender, EventArgs e)
         {
+            var selectedStripName = stripList.SelectedItems[0].Text;
             var strip = stripList.SelectedItems[0].Tag as LightStrip;
-            _server.RemoveStrip(strip);
-            FillListView();
+            DialogResult result = MessageBox.Show(String.Format("Are you sure you want to delete the {0} strip", selectedStripName), Application.ProductName + " - Are you sure?", MessageBoxButtons.YesNoCancel);
+            if (result == DialogResult.Yes)
+            {
+                _server.RemoveStrip(strip);
+                FillListView();
+            }
         }
 
         private void saveToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            _server.SaveStrips();
+            //Default this to the standard file name
+            var fileName = "AllStrips.json";
+
+            // we know this should be a string, treat it as one
+            if (activeFileName.Trim() == string.Empty)
+            {
+                DialogResult saveResult = saveDialog.ShowDialog();
+
+                if (saveResult == DialogResult.OK && saveDialog.FileName.ToLower().EndsWith(".json"))
+                {
+                    fileName = saveDialog.FileName;
+                }
+            }
+            else if (activeFileName.Trim().ToLower().EndsWith(".json"))
+            {
+                fileName = activeFileName.Trim();
+            }
+            _server.SaveStripsAs(fileName);
+            //_server.SaveStrips();
         }
 
         private void openToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            _server.LoadStrips();
-            FillListView();
+
+            DialogResult openResult = openDialog.ShowDialog();
+
+            if (openResult == DialogResult.OK && openDialog.FileName.ToLower().Trim().EndsWith(".json"))
+            {
+                activeFileName = openDialog.FileName;
+                _server.LoadStripsFromFile(openDialog.FileName);
+                FillListView();
+                panelVisualizer.ColorData = null;
+                panelVisualizer.Invalidate();
+            }
+            else
+            {
+                MessageBox.Show("Could not open the selected file.", Application.ProductName + " - Open File Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
         }
 
         private void loadDemoFileToolStripMenuItem_Click(object sender, EventArgs e)
         {
             _server.LoadStripsFromTable();
             FillListView();
+        }
+
+        private void newToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            DialogResult result = MessageBox.Show("Save before closing?", Application.ProductName + " - Save LED Strip List", MessageBoxButtons.YesNoCancel);
+            if (result == DialogResult.Yes)
+            {
+                //Default this to the standard file name
+                var fileName = "AllStrips.json";
+
+                // we know this should be a string, treat it as one
+                if (activeFileName.Trim().EndsWith(".json"))
+                {
+                    fileName = activeFileName.Trim();
+                }
+                _server.SaveStripsAs(fileName);
+            }
+            _server.FreshStart();
+            stripList.Clear();
+            FillListView();
+            panelVisualizer.ColorData = null;
+            panelVisualizer.Invalidate();
+            activeFileName = string.Empty;
+            openDialog.FileName = string.Empty;
+            saveDialog.FileName = string.Empty;
+        }
+
+        private void buttonNewStrip_Click(object sender, EventArgs e)
+        {
+            AddNewStrip();
+        }
+
+        private void newEntryToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            AddNewStrip();
+        }
+
+        private void saveAsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            DialogResult saveResult = saveDialog.ShowDialog();
+
+            if (saveResult == DialogResult.OK && saveDialog.FileName.ToLower().EndsWith(".json"))
+            {
+                _server.SaveStripsAs(saveDialog.FileName);
+            }
+        }
+
+        private void buttonEditStrip_Click(object sender, EventArgs e)
+        {
+            var selectedStripName = stripList.SelectedItems[0].Text;
+            var strip = stripList.SelectedItems[0].Tag as LightStrip;
+
+            LightStripEditor editStrip = new();
+            editStrip.DialogMode = LightStripEditor.DialogOperatingMode.Edit;
+            editStrip.StripToEdit = strip;
+
+            DialogResult result = editStrip.ShowDialog();
+
+            if (!(result == DialogResult.OK))
+            {
+                return;
+            }
+            else if (editStrip.Tag is LightStrip)
+            {
+                if (editStrip.Tag == null)
+                {
+                    MessageBox.Show(
+                        "Error while adding new LED strip.",
+                        "Invalid LED Strip Data",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error
+                        );
+                }
+                LightStrip editedStrip = (LightStrip)editStrip.Tag;
+                _server.RemoveStrip(strip);
+                _server.AllStrips.Add(editedStrip);
+                FillListView();
+            }
         }
     }
 }
